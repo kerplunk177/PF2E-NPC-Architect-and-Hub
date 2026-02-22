@@ -34,7 +34,9 @@
                     <div class="card-content">
                         <h3 class="card-title">{{name}}</h3>
                         <div class="card-meta">
+                            {{#unless isLocation}}
                             <span class="aff-badge {{affClass}}">{{affiliation}}</span>
+                            {{/unless}}
                         </div>
                         <p class="card-blurb"><em>{{blurb}}</em></p>
                     </div>

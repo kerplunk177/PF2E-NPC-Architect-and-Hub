@@ -2,7 +2,7 @@ export class ArchetypeBuilderApp extends FormApplication {
     constructor(archetypeId = null) {
         super();
         this.archetypeId = archetypeId;
-        const savedArchetypes = game.settings.get("npc-architect", "customArchetypes") || {};
+        const savedArchetypes = game.settings.get("pf2e-npc-architect", "customArchetypes") || {};
         this.data = archetypeId ? savedArchetypes[archetypeId] : {
             name: "New Archetype",
             levels: Array.from({length: 20}, (_, i) => ({
@@ -18,10 +18,10 @@ export class ArchetypeBuilderApp extends FormApplication {
         return mergeObject(super.defaultOptions, {
             id: "archetype-builder",
             title: "Archetype Builder",
-            template: "modules/npc-architect/templates/builder-shell.hbs",
+            template: "modules/pf2e-npc-architect/templates/builder-shell.hbs",
             width: 800,
             height: 700,
-            classes: ["npc-architect"],
+            classes: ["pf2e-npc-architect"],
             resizable: true,
             dragDrop: [{ dragSelector: ".item-list .item", dropSelector: ".level-row" }]
         });

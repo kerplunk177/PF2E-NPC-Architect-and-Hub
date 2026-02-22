@@ -54,7 +54,7 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
     if (ROLES[roleKey]) {
         blueprint = { ...ROLES[roleKey], items: [] };
     } else {
-        const customArchetypes = game.settings.get("npc-architect", "customArchetypes");
+        const customArchetypes = game.settings.get("pf2e-npc-architect", "customArchetypes");
         const archetype = customArchetypes[roleKey];
         customArchetypeDef = archetype; 
         if (archetype) {
@@ -539,7 +539,7 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
                         const exactDuplicates = actor.items.filter(i => 
                             i.name === sourceItem.name && 
                             i.type === "spell" &&
-                            (i.flags?.["npc-architect"]?.injectedRank === incomingRank || 
+                            (i.flags?.["pf2e-npc-architect"]?.injectedRank === incomingRank || 
                              (i.system?.location?.heightenedLevel || i.system?.level?.value || 1) === incomingRank)
                         );
                         
@@ -566,7 +566,7 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
                         
                         if (itemData.type === "spell") {
                             itemData.flags = itemData.flags || {};
-                            itemData.flags["npc-architect"] = { injectedRank: req.rank ? parseInt(req.rank) : (itemData.system?.level?.value || 1) };
+                            itemData.flags["pf2e-npc-architect"] = { injectedRank: req.rank ? parseInt(req.rank) : (itemData.system?.level?.value || 1) };
                             
                             if (entryId) {
                                 if (!itemData.system) itemData.system = {};

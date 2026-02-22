@@ -26,6 +26,10 @@
 
             <div class="form-group">
                 <label><strong>Faction / Organization</strong></label>
+                <label style="color: #e0e0e0; margin-left: 15px;">
+    <input type="checkbox" name="isLocation" {{#if isLocation}}checked{{/if}}> 
+    Treat as Location
+</label>
                 <div class="form-fields">
                     <input type="text" name="faction" value="{{faction}}" placeholder="e.g. City Watch, The Obsidian Cult">
                 </div>

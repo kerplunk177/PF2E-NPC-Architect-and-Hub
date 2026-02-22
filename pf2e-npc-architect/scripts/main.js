@@ -4,7 +4,7 @@ import { NpcDossierApp } from "./NpcDossierApp.js";
 Hooks.once('init', async () => {
     console.log("NPC Architect | Initializing");
 
-    game.settings.register("npc-architect", "customArchetypes", {
+    game.settings.register("pf2e-npc-architect", "customArchetypes", {
         name: "Custom Archetypes",
         scope: "world",
         config: false,
@@ -12,7 +12,7 @@ Hooks.once('init', async () => {
         default: {}
     });
 
-    game.settings.register("npc-architect", "factionOrder", {
+    game.settings.register("pf2e-npc-architect", "factionOrder", {
         name: "Faction Sort Order",
         scope: "world",
         config: false,
@@ -21,12 +21,11 @@ Hooks.once('init', async () => {
     });
 
     loadTemplates([
-        "modules/npc-architect/templates/hub-shell.hbs",
-        "modules/npc-architect/templates/dossier-grid.hbs",
-        "modules/npc-architect/templates/public-sheet.hbs" 
+        "modules/pf2e-npc-architect/templates/hub-shell.hbs",
+        "modules/pf2e-npc-architect/templates/dossier-grid.hbs",
+        "modules/pf2e-npc-architect/templates/public-sheet.hbs" 
     ]);
 });
-
 
 Hooks.once("ready", async () => {
     if (game.user.isGM) {
@@ -39,6 +38,15 @@ Hooks.once("ready", async () => {
             });
         }
     }
+    game.socket.on("module.pf2e-npc-architect", (data) => {
+        if (data.action === "forceRefresh") {
+            Object.values(ui.windows).forEach(w => {
+                if (w.id === "npc-dossier-hub" || w.id.startsWith("public-sheet-")) {
+                    w.render(true);
+                }
+            });
+        }
+    });
 });
 
 Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
@@ -47,7 +55,7 @@ Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
 
     buttons.unshift({
         label: "", 
-        class: "npc-architect-btn",
+        class: "pf2e-npc-architect-btn",
         icon: "fas fa-chess-pawn",
         onclick: () => {
             import("./NpcArchitectApp.js").then(m => new m.NpcArchitectApp(sheet.actor).render(true));
@@ -81,3 +89,4 @@ Hooks.on("getSceneControlButtons", (controls) => {
         }
     }
 });
+

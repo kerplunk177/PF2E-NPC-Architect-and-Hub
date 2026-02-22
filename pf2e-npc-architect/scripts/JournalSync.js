@@ -13,7 +13,7 @@ export async function syncDossier(actor) {
     
 
     const bio = actor.system.details.biography.value || "No biography.";
-    const affiliation = actor.getFlag("npc-architect", "affiliation") || 0;
+    const affiliation = actor.getFlag("pf2e-npc-architect", "affiliation") || 0;
     
     const content = `
         <div class="npc-dossier">

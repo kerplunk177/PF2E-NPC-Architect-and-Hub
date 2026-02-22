@@ -2,14 +2,13 @@
   "name": "pf2e-npc-architect",
   "title": "PF2e NPC Architect",
   "description": "Dynamic NPC scaling and Dossier management.",
-  "version": "0.0.1",
+  "version": "1.0",
   "Author": "Sean Wright",
-  "id": "npc-architect",
+  "id": "pf2e-npc-architect",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
   },
   "esmodules": ["scripts/main.js"],
   "styles": ["styles/architect.css"]
-
 }

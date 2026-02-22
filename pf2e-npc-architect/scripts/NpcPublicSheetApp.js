@@ -7,7 +7,7 @@ export class NpcPublicSheetApp extends FormApplication {
     static get defaultOptions() {
         return mergeObject(super.defaultOptions, {
             title: "NPC File",
-            template: "modules/npc-architect/templates/public-sheet.hbs",
+            template: "modules/pf2e-npc-architect/templates/public-sheet.hbs",
             width: 700,
             height: 650,
             classes: ["npc-architect", "public-sheet"],
@@ -21,7 +21,8 @@ export class NpcPublicSheetApp extends FormApplication {
     }
 
     getData() {
-        const flags = this.actor.getFlag("npc-architect", "data") || {};
+        const flags = this.actor.getFlag("pf2e-npc-architect", "data") || {};
+        const isMystified = this.actor.getFlag("pf2e-npc-architect", "mystified") || false;
         
         let rawAff = String(flags.affiliation || "").trim();
         let affLabel = "Neutral";
@@ -40,17 +41,19 @@ export class NpcPublicSheetApp extends FormApplication {
         }
 
         const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
-        const partyNotes = notesJournal ? (notesJournal.getFlag("npc-architect", `notes_${this.actor.id}`) || "") : "";
+        const partyNotes = notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", `notes_${this.actor.id}`) || "") : "";
 
         const connectionsRaw = flags.connections || [];
         const resolvedConnections = [];
         for (let conn of connectionsRaw) {
             const linkedActor = game.actors.get(conn.id);
             if (linkedActor) {
+                // If the connected actor is mystified, hide their identity here too
+                const connMystified = linkedActor.getFlag("pf2e-npc-architect", "mystified") || false;
                 resolvedConnections.push({
                     id: linkedActor.id,
-                    name: linkedActor.name,
-                    img: linkedActor.img,
+                    name: connMystified ? "Unknown Entity" : linkedActor.name,
+                    img: connMystified ? "icons/svg/mystery-man.svg" : linkedActor.img,
                     label: conn.label
                 });
             }
@@ -58,22 +61,39 @@ export class NpcPublicSheetApp extends FormApplication {
 
         return {
             actor: this.actor,
+            isGM: game.user.isGM,
+            isMystified: isMystified,
+            displayImage: isMystified ? "icons/svg/mystery-man.svg" : this.actor.img,
             faction: flags.faction || "Unaligned",
             affiliation: affLabel,
             affClass: affClass,
             bioPublic: flags.bioPublic || "",
             partyNotes: partyNotes,
-            connections: resolvedConnections
+            connections: resolvedConnections,
+            isLocation: flags.isLocation || false,
         };
     }
 
     activateListeners(html) {
         super.activateListeners(html);
 
+        // GM Toggle for Mystify Status
+        html.find('.mystify-toggle').click(async (ev) => {
+            ev.preventDefault();
+            const currentStatus = this.actor.getFlag("pf2e-npc-architect", "mystified") || false;
+            await this.actor.setFlag("pf2e-npc-architect", "mystified", !currentStatus);
+            this.render(false);
+            
+            // Also force the main Dossier grid to re-render if it's open
+            const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
+            if (dossier) dossier.render(false);
+        });
+
         html.find('.profile-img').click(ev => {
             const src = $(ev.currentTarget).attr('src');
+            const isMystified = this.actor.getFlag("pf2e-npc-architect", "mystified") || false;
             new ImagePopout(src, {
-                title: this.actor.name,
+                title: isMystified ? "Unknown Entity" : this.actor.name,
                 uuid: this.actor.uuid
             }).render(true);
         });
@@ -96,7 +116,7 @@ export class NpcPublicSheetApp extends FormApplication {
     async _updateObject(event, formData) {
         const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
         if (notesJournal) {
-            await notesJournal.setFlag("npc-architect", `notes_${this.actor.id}`, formData.partyNotes);
+            await notesJournal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, formData.partyNotes);
         } else {
             ui.notifications.warn("NPC Architect: Could not save notes. The shared journal is missing.");
         }

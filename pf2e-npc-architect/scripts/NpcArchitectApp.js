@@ -10,13 +10,13 @@ export class NpcArchitectApp extends FormApplication {
 
     static get defaultOptions() {
         return mergeObject(super.defaultOptions, {
-            id: "npc-architect-app",
+            id: "pf2e-npc-architect-app",
             title: "NPC Architect",
-            template: "modules/npc-architect/templates/hub-shell.hbs",
+            template: "modules/pf2e-npc-architect/templates/hub-shell.hbs",
             width: 800,
             height: "auto",
             resizable: true,
-            classes: ["npc-architect"],
+            classes: ["pf2e-npc-architect"],
             submitOnChange: true,
             closeOnSubmit: false,
             tabs: [{ navSelector: ".architect-nav", contentSelector: ".architect-body", initial: "dossier" }]
@@ -25,10 +25,11 @@ export class NpcArchitectApp extends FormApplication {
 
     getData() {
         const data = super.getData();
-        const flags = this.actor.getFlag("npc-architect", "data") || {};
+        const flags = this.actor.getFlag("pf2e-npc-architect", "data") || {};
         
         data.actor = this.actor;
         data.tracked = flags.tracked || false;
+        data.isLocation = flags.isLocation || false;
         data.faction = flags.faction || "";
 
 
@@ -57,7 +58,7 @@ export class NpcArchitectApp extends FormApplication {
         }
         data.affiliationStatus = currentAff;
 
-        const customArchetypes = game.settings.get("npc-architect", "customArchetypes") || {};
+        const customArchetypes = game.settings.get("pf2e-npc-architect", "customArchetypes") || {};
         data.savedArchetypes = customArchetypes;
         data.roles = {
             "soldier": "Soldier / Brute",
@@ -79,7 +80,7 @@ export class NpcArchitectApp extends FormApplication {
         game.actors.forEach(a => {
             if (a.id === this.actor.id) return; 
             const isPC = a.type === "character";
-            const isTracked = a.getFlag("npc-architect", "data")?.tracked;
+            const isTracked = a.getFlag("pf2e-npc-architect", "data")?.tracked;
             
             if (isPC || isTracked) {
                 eligibleActors.push({ id: a.id, name: a.name });
@@ -99,7 +100,8 @@ export class NpcArchitectApp extends FormApplication {
 
     async _updateObject(event, formData) {
         if (!event.target || !event.target.closest('#builder-editor')) {
-            formData.tracked = !!formData.tracked; 
+            formData.tracked = !!formData.tracked;
+            formData.isLocation = !!formData.isLocation; 
             formData.affiliation = String(formData.affiliation).trim();
             
             const connections = [];
@@ -112,7 +114,7 @@ export class NpcArchitectApp extends FormApplication {
             });
             formData.connections = connections;
             
-            await this.actor.setFlag("npc-architect", "data", formData);
+            await this.actor.setFlag("pf2e-npc-architect", "data", formData);
             
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
             if (dossier) dossier.render(true);
@@ -127,7 +129,7 @@ export class NpcArchitectApp extends FormApplication {
             const formElement = this.element.find("form")[0];
             const formData = new FormDataExtended(formElement).object;
             await updateNpcStats(this.actor, parseInt(formData.targetLevel), formData.role);
-            await this.actor.setFlag("npc-architect", "data", { role: formData.role, targetLevel: parseInt(formData.targetLevel) });
+            await this.actor.setFlag("pf2e-npc-architect", "data", { role: formData.role, targetLevel: parseInt(formData.targetLevel) });
             this.render();
         });
 
@@ -155,7 +157,7 @@ export class NpcArchitectApp extends FormApplication {
             let actorsObj = [];
             game.actors.forEach(a => {
                 if (a.id === this.actor.id) return;
-                if (a.type === "character" || a.getFlag("npc-architect", "data")?.tracked) {
+                if (a.type === "character" || a.getFlag("pf2e-npc-architect", "data")?.tracked) {
                     actorsObj.push({id: a.id, name: a.name});
                 }
             });
@@ -202,7 +204,7 @@ export class NpcArchitectApp extends FormApplication {
     }
 
     _loadArchetype(id) {
-        const saved = game.settings.get("npc-architect", "customArchetypes");
+        const saved = game.settings.get("pf2e-npc-architect", "customArchetypes");
         const loaded = saved[id] ? foundry.utils.deepClone(saved[id]) : null;
         if (loaded) {
             loaded.levels = loaded.levels.map(l => ({
@@ -318,9 +320,9 @@ export class NpcArchitectApp extends FormApplication {
             }
         });
 
-        const allArchetypes = game.settings.get("npc-architect", "customArchetypes");
+        const allArchetypes = game.settings.get("pf2e-npc-architect", "customArchetypes");
         allArchetypes[this._editingArchetype.id] = this._editingArchetype;
-        await game.settings.set("npc-architect", "customArchetypes", allArchetypes);
+        await game.settings.set("pf2e-npc-architect", "customArchetypes", allArchetypes);
         
         ui.notifications.info(`Saved Archetype: ${this._editingArchetype.name}`);
         this.render(); 

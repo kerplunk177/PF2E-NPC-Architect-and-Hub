@@ -3,29 +3,39 @@
         
         <div class="sheet-sidebar">
             <div class="portrait-container" title="Click to expand image">
-                <img src="{{actor.img}}" class="profile-img">
+                <img src="{{displayImage}}" class="profile-img">
             </div>
             
-            <h1 class="npc-name">{{actor.name}}</h1>
+            {{#if isGM}}
+            <button type="button" class="mystify-toggle" style="margin-bottom: 15px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
+                <i class="fas {{#if isMystified}}fa-eye{{else}}fa-user-secret{{/if}}"></i> 
+                {{#if isMystified}}Reveal Identity{{else}}Mystify NPC{{/if}}
+            </button>
+            {{/if}}
             
+            <h1 class="npc-name">
+                {{actor.name}}
+            </h1>
+            
+            {{#unless isLocation}}
             <div class="faction-tag">{{faction}}</div>
             
             <div class="aff-badge-large {{affClass}}">
                 {{affiliation}}
             </div>
+            {{/unless}}
         </div>
 
         <div class="sheet-main">
             
+            <div class="sheet-main">
+            
             <div class="notes-section">
-                <h3><i class="fas fa-book-open"></i> Public Records</h3>
-                <div class="bio-text">
-                    {{#if bioPublic}}
-                        {{bioPublic}}
-                    {{else}}
-                        <em style="color:#777;">No records on file.</em>
-                    {{/if}}
-                </div>
+                <h3>
+                    <i class="fas {{#if isLocation}}fa-map-marker-alt{{else}}fa-book-open{{/if}}"></i> 
+                    {{#if isLocation}}Location Details{{else}}Public Records{{/if}}
+                </h3>
+                <div class="bio-text">{{#if bioPublic}}{{bioPublic}}{{else}}<em style="color:#777;">No records on file.</em>{{/if}}</div>
             </div>
             
             {{#if connections.length}}

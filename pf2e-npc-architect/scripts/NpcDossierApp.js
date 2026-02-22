@@ -8,19 +8,21 @@ export class NpcDossierApp extends Application {
         return mergeObject(super.defaultOptions, {
             id: "npc-dossier-hub",
             title: "Campaign Dossier",
-            template: "modules/npc-architect/templates/dossier-grid.hbs",
+            template: "modules/pf2e-npc-architect/templates/dossier-grid.hbs",
             width: 900,
             height: 700,
-            classes: ["npc-architect"],
+            classes: ["pf2e-npc-architect"],
             resizable: true
         });
     }
 
     getData() {
-        const trackedActors = game.actors.filter(a => a.getFlag("npc-architect", "data")?.tracked);
+        const trackedActors = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
 
         const cards = trackedActors.map(actor => {
-            const flags = actor.getFlag("npc-architect", "data") || {};
+            const flags = actor.getFlag("pf2e-npc-architect", "data") || {};
+            const isMystified = actor.getFlag("pf2e-npc-architect", "mystified") || false;
+            const isLocation = flags.isLocation || false;
             
             let rawAff = flags.affiliation;
             if (Array.isArray(rawAff)) rawAff = rawAff[0];
@@ -44,13 +46,14 @@ export class NpcDossierApp extends Application {
 
             return {
                 id: actor.id,
-                name: actor.name,
-                img: actor.img,
+                name: actor.name, 
+                img: isMystified ? "icons/svg/mystery-man.svg" : actor.img,
                 role: flags.role || "Unknown",
-                faction: flags.faction || "Unaligned",
+                isLocation: isLocation, 
+                faction: isLocation ? "Locations" : (flags.faction || "Unaligned"), 
                 affiliation: affLabel,
                 affClass: affClass, 
-                blurb: flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : "No public details."
+                blurb: flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details.")
             };
         });
 
@@ -77,7 +80,7 @@ export class NpcDossierApp extends Application {
             return { name: key, cards: groups[key] };
         });
 
-        let savedOrder = game.settings.get("npc-architect", "factionOrder") || [];
+        let savedOrder = game.settings.get("pf2e-npc-architect", "factionOrder") || [];
         
         factionList.sort((a, b) => {
             if (a.name === "Unaligned") return 1;
@@ -198,14 +201,14 @@ export class NpcDossierApp extends Application {
 
 
         html.find('.manage-factions-btn').click(async () => {
-            const actors = game.actors.filter(a => a.getFlag("npc-architect", "data")?.tracked);
+            const actors = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
             const currentFactions = [...new Set(actors.map(a => {
-                const f = a.getFlag("npc-architect", "data")?.faction;
+                const f = a.getFlag("pf2e-npc-architect", "data")?.faction;
                 return (f && f.trim() !== "") ? f : "Unaligned";
             }))];
             
             const sortable = currentFactions.filter(f => f !== "Unaligned");
-            let savedOrder = game.settings.get("npc-architect", "factionOrder") || [];
+            let savedOrder = game.settings.get("pf2e-npc-architect", "factionOrder") || [];
             
             let finalOrder = savedOrder.filter(f => sortable.includes(f)); 
             sortable.forEach(f => { if (!finalOrder.includes(f)) finalOrder.push(f); });
@@ -235,7 +238,7 @@ export class NpcDossierApp extends Application {
                             dHtml.find('#faction-sort-list li').each((i, el) => {
                                 newOrder.push($(el).data('faction'));
                             });
-                            await game.settings.set("npc-architect", "factionOrder", newOrder);
+                            await game.settings.set("pf2e-npc-architect", "factionOrder", newOrder);
                             this.render(); 
                         }
                     }
