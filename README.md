@@ -4,6 +4,8 @@
 
 It features a robust math engine that instantly recalculates an NPC's core statistics, saves, skills, strikes, and spell DCs to match any target level and combat role. Beyond raw stat scaling, the module introduces a custom Archetype Builder, allowing GMs to map out 1 to 20 class progressions using a drag-and-drop interface. When applied, the Architect automatically injects leveled features, overwrites obsolete abilities, and sorts heightened spells into newly generated, fully scaled spellcasting entries. Complete with an on-the-fly weapon Forge, compendium spell scraping, and an interactive public dossier for tracking player notes and faction connections, NPC Architect handles the heavy lifting of custom encounter design.
 
+To use these features, click the Pawn Symbol at the top of any NPC. Enabling "Track in Campaign Hub" will track them inside of the NPC Dossier, accessable from the Token Controls -> Campaign Dossier (Represented by the 3 meeples). Once they're in this menu, Right clicking will bring up their Architect window, left clicking on the token will navigate to a public sheet section, and left clicking on the bottom portion (including the name and affiliation) will open the NPC's sheet. You can also drag NPC's from the Dossier to any canvas!
+
 ## Core Features
 
 * **Dynamic Level Scaling:** Instantly scale any NPC up or down. The math engine automatically adjusts HP, AC, Saves, Skills, Strike Attack/Damage, and Spell DCs based on high, moderate, or low target benchmarks for their new level.
