@@ -19,7 +19,7 @@ It features a robust math engine that instantly recalculates an NPC's core stati
 1. Open Foundry VTT and navigate to the **Add-on Modules** tab.
 2. Click **Install Module**.
 3. Paste the following link into the **Manifest URL** field at the bottom:
-   `[Insert your GitHub raw module.json link here]`
+   `https://github.com/kerplunk177/PF2E-NPC-Architect-and-Hub/blob/main/npc-architect/module.json`
 4. Click **Install**.
 5. Open your World, navigate to **Manage Modules**, and enable **NPC Architect**.
 
