@@ -1,5 +1,5 @@
 {
-  "name": "npc-architect",
+  "name": "pf2e-npc-architect",
   "title": "PF2e NPC Architect",
   "description": "Dynamic NPC scaling and Dossier management.",
   "version": "0.0.1",
@@ -11,4 +11,5 @@
   },
   "esmodules": ["scripts/main.js"],
   "styles": ["styles/architect.css"]
+
 }
