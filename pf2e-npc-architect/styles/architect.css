@@ -99,3 +99,67 @@ input[type="range"].affiliation-slider {
     font-weight: bold;
     text-transform: uppercase;
 }
+/* npc-architect.css */
+
+/* Ensure the form takes full height and doesn't cause window scrolling */
+.public-sheet-form {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 15px;
+    background: #1c1b1a;
+    color: #e0e0e0;
+    box-sizing: border-box;
+}
+
+/* The main side-by-side layout */
+.sheet-layout {
+    flex: 1;
+    display: flex;
+    gap: 20px;
+    overflow: hidden; /* Crucial: Forces children to manage their own overflow */
+    height: 100%;
+}
+
+/* The Left Sidebar */
+.sheet-sidebar {
+    flex: 0 0 240px; /* Fixed width */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 2px solid #5a5954;
+    padding-right: 20px;
+    overflow-y: auto; /* Allow sidebar to scroll independently if needed */
+}
+
+/* The Right Main Column */
+.sheet-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Crucial: Forces the notes section to scroll internally */
+}
+
+/* The wrapper for the notes section that needs to grow */
+.party-notes-wrapper {
+    flex: 1; /* Take all remaining vertical space */
+    display: flex;
+    flex-direction: column;
+    min-height: 200px; /* Ensure it doesn't get crushed too small */
+    overflow: hidden; /* Force the feed inside to scroll */
+}
+
+/* The actual scrolling area for messages */
+.notes-feed {
+    flex: 1; /* Fill the wrapper */
+    overflow-y: auto; /* Scroll internally! */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-right: 5px;
+    /* Cosmetic scrollbar styling for webkit browsers */
+    scrollbar-width: thin;
+    scrollbar-color: #5a5954 rgba(0,0,0,0.1);
+}

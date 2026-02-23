@@ -12,7 +12,8 @@ export class NpcPublicSheetApp extends FormApplication {
             height: 650,
             classes: ["npc-architect", "public-sheet"],
             submitOnChange: true,
-            closeOnSubmit: false
+            closeOnSubmit: false,
+            resizable: true
         });
     }
 
@@ -41,14 +42,48 @@ export class NpcPublicSheetApp extends FormApplication {
         }
 
         const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
-        const partyNotes = notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", `notes_${this.actor.id}`) || "") : "";
+        let rawNotes = notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", `notes_${this.actor.id}`) || []) : [];
+        
+        let notesArray = [];
+        if (typeof rawNotes === "string") {
+            if (rawNotes.trim() !== "") {
+                notesArray.push({ id: "legacy-note", userId: "legacy", text: rawNotes, time: Date.now() });
+            }
+        } else if (Array.isArray(rawNotes)) {
+            notesArray = rawNotes;
+        }
+
+        const formattedNotes = notesArray.map(n => {
+            let authorName = "Archived Note";
+            let cssColor = "#777777";
+            
+            if (n.userId !== "legacy") {
+                const author = game.users.get(n.userId);
+                if (author) {
+                    authorName = author.name;
+                    cssColor = author.color?.css || author.color || "#777777"; 
+                }
+            }
+            
+            const date = new Date(n.time);
+            const isAuthor = n.userId === game.user.id;
+            const isGM = game.user.isGM;
+
+            return {
+                id: n.id || n.time, 
+                text: n.text,
+                authorName: authorName,
+                color: cssColor,
+                timestamp: `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`,
+                canEdit: isAuthor || isGM || n.userId === "legacy" 
+            };
+        });
 
         const connectionsRaw = flags.connections || [];
         const resolvedConnections = [];
         for (let conn of connectionsRaw) {
             const linkedActor = game.actors.get(conn.id);
             if (linkedActor) {
-                // If the connected actor is mystified, hide their identity here too
                 const connMystified = linkedActor.getFlag("pf2e-npc-architect", "mystified") || false;
                 resolvedConnections.push({
                     id: linkedActor.id,
@@ -68,7 +103,7 @@ export class NpcPublicSheetApp extends FormApplication {
             affiliation: affLabel,
             affClass: affClass,
             bioPublic: flags.bioPublic || "",
-            partyNotes: partyNotes,
+            partyNotesList: formattedNotes.reverse(), 
             connections: resolvedConnections,
             isLocation: flags.isLocation || false,
         };
@@ -77,14 +112,12 @@ export class NpcPublicSheetApp extends FormApplication {
     activateListeners(html) {
         super.activateListeners(html);
 
-        // GM Toggle for Mystify Status
         html.find('.mystify-toggle').click(async (ev) => {
             ev.preventDefault();
             const currentStatus = this.actor.getFlag("pf2e-npc-architect", "mystified") || false;
             await this.actor.setFlag("pf2e-npc-architect", "mystified", !currentStatus);
             this.render(false);
             
-            // Also force the main Dossier grid to re-render if it's open
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
             if (dossier) dossier.render(false);
         });
@@ -106,19 +139,89 @@ export class NpcPublicSheetApp extends FormApplication {
             }
         });
 
-        html.find('.save-notes-btn').click(ev => {
-            ev.preventDefault();
-            this.element.submit(); 
-            ui.notifications.info("Party notes saved.");
-        });
-    }
 
-    async _updateObject(event, formData) {
-        const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
-        if (notesJournal) {
-            await notesJournal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, formData.partyNotes);
-        } else {
-            ui.notifications.warn("NPC Architect: Could not save notes. The shared journal is missing.");
-        }
+        const getNotesData = () => {
+            const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
+            if (!notesJournal) return null;
+            let rawNotes = notesJournal.getFlag("pf2e-npc-architect", `notes_${this.actor.id}`) || [];
+
+if (typeof rawNotes === "string") {
+
+   if (rawNotes.trim() !== "") {
+       notesArray.push({ id: "legacy-note", userId: "legacy", text: rawNotes, time: Date.now() });
+   }
+}
+            return { journal: notesJournal, notes: rawNotes };
+        };
+
+        const postNote = async () => {
+            const inputField = html.find('.new-note-input');
+            const text = inputField.val().trim();
+            if (!text) return;
+
+            const data = getNotesData();
+            if (!data) return ui.notifications.warn("NPC Architect: Shared journal missing.");
+
+            data.notes.push({
+                id: foundry.utils.randomID(),
+                userId: game.user.id,
+                text: text,
+                time: Date.now()
+            });
+
+            await data.journal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, data.notes);
+            this.render(false);
+        };
+
+        html.find('.post-note-btn').click(ev => { ev.preventDefault(); postNote(); });
+        html.find('.new-note-input').keydown(ev => {
+            if (ev.key === "Enter" && !ev.shiftKey) {
+                ev.preventDefault();
+                postNote();
+            }
+        });
+
+        html.find('.delete-note-btn').click(async ev => {
+            const noteId = String($(ev.currentTarget).data('id'));
+            const data = getNotesData();
+            if (!data) return;
+
+            const newNotes = data.notes.filter(n => String(n.id || n.time) !== noteId);
+            await data.journal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, newNotes);
+            this.render(false);
+        });
+
+
+        html.find('.edit-note-btn').click(async ev => {
+            const noteId = String($(ev.currentTarget).data('id'));
+            const data = getNotesData();
+            if (!data) return;
+
+            const noteIndex = data.notes.findIndex(n => String(n.id || n.time) === noteId);
+            if (noteIndex === -1) return;
+
+            const currentText = data.notes[noteIndex].text;
+
+            new Dialog({
+                title: "Edit Note",
+                content: `<textarea id="edit-note-text" style="width:100%; height: 150px; resize: none; background: rgba(255,255,255,0.9); color: #111; padding: 10px; font-family: inherit;">${currentText}</textarea>`,
+                buttons: {
+                    save: {
+                        icon: '<i class="fas fa-save"></i>',
+                        label: "Save Changes",
+                        callback: async (dHtml) => {
+                            const newText = dHtml.find('#edit-note-text').val().trim();
+                            if (newText) {
+                                data.notes[noteIndex].text = newText;
+                                await data.journal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, data.notes);
+                                this.render(false);
+                            }
+                        }
+                    },
+                    cancel: { icon: '<i class="fas fa-times"></i>', label: "Cancel" }
+                },
+                default: "save"
+            }).render(true);
+        });
     }
 }

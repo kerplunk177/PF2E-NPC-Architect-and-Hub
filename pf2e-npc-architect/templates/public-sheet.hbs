@@ -2,8 +2,8 @@
     <div class="sheet-layout">
         
         <div class="sheet-sidebar">
-            <div class="portrait-container" title="Click to expand image">
-                <img src="{{displayImage}}" class="profile-img">
+            <div class="portrait-container" style="width: 100%; height: 240px; background: #000; border: 2px solid #4b4a44; border-radius: 5px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                <img src="{{displayImage}}" class="profile-img" style="max-width: 100%; max-height: 100%; object-fit: contain; border: none; cursor: pointer;">
             </div>
             
             {{#if isGM}}
@@ -13,14 +13,14 @@
             </button>
             {{/if}}
             
-            <h1 class="npc-name">
+            <h1 class="npc-name" style="font-family: 'Modesto Condensed', serif; font-size: 2em; text-align: center; margin: 0 0 10px 0; line-height: 1.1em; color: #e0e0e0;">
                 {{actor.name}}
             </h1>
             
             {{#unless isLocation}}
-            <div class="faction-tag">{{faction}}</div>
+            <div class="faction-tag" style="font-size: 1.1em; font-weight: bold; color: #aaa; margin-bottom: 15px; text-align: center;">{{faction}}</div>
             
-            <div class="aff-badge-large {{affClass}}">
+            <div class="aff-badge-large {{affClass}}" style="width: 100%; text-align: center; padding: 8px 0; border-radius: 4px; font-size: 1.2em; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
                 {{affiliation}}
             </div>
             {{/unless}}
@@ -28,27 +28,25 @@
 
         <div class="sheet-main">
             
-            <div class="sheet-main">
-            
             <div class="notes-section">
-                <h3>
+                <h3 style="border-bottom: 1px solid #5a5954; margin: 0 0 10px 0; padding-bottom: 5px; color: #e0e0e0;">
                     <i class="fas {{#if isLocation}}fa-map-marker-alt{{else}}fa-book-open{{/if}}"></i> 
                     {{#if isLocation}}Location Details{{else}}Public Records{{/if}}
                 </h3>
-                <div class="bio-text">{{#if bioPublic}}{{bioPublic}}{{else}}<em style="color:#777;">No records on file.</em>{{/if}}</div>
+                <div class="bio-text" style="font-size: 1.1em; line-height: 1.4em; color: #ccc; white-space: pre-wrap; max-height: 200px; overflow-y: auto; padding-right: 10px;">{{#if bioPublic}}{{bioPublic}}{{else}}<em style="color:#777;">No records on file.</em>{{/if}}</div>
             </div>
             
             {{#if connections.length}}
-            <hr>
+            <hr style="border: 0; height: 2px; background: #5a5954; margin: 20px 0;">
             <div class="notes-section connections-section">
-                <h3><i class="fas fa-network-wired"></i> Known Connections</h3>
-                <div class="connections-grid">
+                <h3 style="border-bottom: 1px solid #5a5954; margin: 0 0 10px 0; padding-bottom: 5px; color: #e0e0e0;"><i class="fas fa-network-wired"></i> Known Connections</h3>
+                <div class="connections-grid" style="display: flex; flex-wrap: wrap; gap: 10px; padding-top: 5px;">
                     {{#each connections}}
-                    <div class="connection-item" data-id="{{id}}" title="Open {{name}}'s File">
-                        <img src="{{img}}" class="conn-img">
-                        <div class="conn-text">
-                            <span class="conn-name">{{name}}</span>
-                            <span class="conn-label">{{label}}</span>
+                    <div class="connection-item" data-id="{{id}}" title="Open {{name}}'s File" style="display: flex; align-items: center; background: rgba(255, 255, 255, 0.9); border: 1px solid #4b4a44; border-radius: 4px; padding: 5px; width: calc(50% - 5px); cursor: pointer;">
+                        <img src="{{img}}" class="conn-img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 1px solid #4b4a44; margin-right: 10px;">
+                        <div class="conn-text" style="display: flex; flex-direction: column; overflow: hidden;">
+                            <span class="conn-name" style="font-weight: bold; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95em;">{{name}}</span>
+                            <span class="conn-label" style="font-size: 0.8em; color: #555; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{label}}</span>
                         </div>
                     </div>
                     {{/each}}
@@ -56,14 +54,41 @@
             </div>
             {{/if}}
 
-            <hr>
+            <hr style="border: 0; height: 2px; background: #5a5954; margin: 20px 0;">
 
             <div class="notes-section party-notes-wrapper">
-                <div class="notes-header">
-                    <h3><i class="fas fa-users"></i> Party Notes</h3>
-                    <button type="button" class="save-notes-btn" title="Force Save Notes"><i class="fas fa-save"></i> Save</button>
+                <div class="notes-header" style="border-bottom: 1px solid #5a5954; margin-bottom: 10px; padding-bottom: 5px;">
+                    <h3 style="margin:0; padding:0; border:none;"><i class="fas fa-users"></i> Party Notes</h3>
                 </div>
-                <textarea name="partyNotes" placeholder="Store your group's observations or thoughts here. Anyone in the party can see and edit this.">{{partyNotes}}</textarea>
+                
+                <div class="notes-feed">
+                    {{#each partyNotesList}}
+                    <div class="note-card" style="background: rgba(255, 255, 255, 0.9); border-left: 4px solid {{color}}; padding: 8px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                        <div style="font-size: 0.8em; color: #555; margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 2px;">
+                            <strong style="color: {{color}}; text-shadow: 0px 0px 1px rgba(0,0,0,0.2);">{{authorName}}</strong>
+                            <span>
+                                {{timestamp}}
+                                {{#if canEdit}}
+                                <a class="edit-note-btn" data-id="{{id}}" style="margin-left: 5px; cursor: pointer; color: #555;" title="Edit Note"><i class="fas fa-edit"></i></a>
+                                <a class="delete-note-btn" data-id="{{id}}" style="margin-left: 5px; cursor: pointer; color: #aa4444;" title="Delete Note"><i class="fas fa-trash"></i></a>
+                                {{/if}}
+                            </span>
+                        </div>
+                        <div style="color: #111; font-size: 1em; white-space: pre-wrap; line-height: 1.3em;">{{text}}</div>
+                    </div>
+                    {{/each}}
+                    
+                    {{#unless partyNotesList.length}}
+                    <em style="color:#777; text-align: center; margin-top: 20px;">No notes on file.</em>
+                    {{/unless}}
+                </div>
+
+                <div class="add-note-area" style="display: flex; gap: 5px; flex: 0 0 auto; align-items: flex-end;">
+                    <textarea class="new-note-input" placeholder="Add an observation..." style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; color: #111; padding: 6px; border-radius: 3px; resize: vertical; min-height: 36px; max-height: 150px; font-family: inherit; line-height: 1.3em;"></textarea>
+                    <button type="button" class="post-note-btn" style="flex: 0 0 40px; height: 36px; padding: 4px; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; cursor: pointer;">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
             </div>
 
         </div>
