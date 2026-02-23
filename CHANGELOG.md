@@ -15,5 +15,10 @@
 ### Added
 * Added functionality for a faction to have Hidden/hidden/HIDDEN entered. If the GM places an NPC or Location into the hidden faction, they won't display for players, and connections from other NPCs or Loctions won't display to them until they are removed from the hidden faction.
 * Gm's can now change the color of the displayed faction names to help with organization.
-* Client Side setting to enable or disable (Enabled by default) a subtle color gradiant animation to the Dossier Hub background. 
+* Client Side setting to enable or disable (Enabled by default) a subtle color gradiant animation to the Dossier Hub background.
 
+## [1.4] - 2026-02-23
+
+ ### Added
+* Functionality for multiple Campaigns. Gm's can assign NPCs to a specific campaign, and then toggle between them using a dropdown box.
+* Added a keybind function to the controls options. It defaults to ALT+D
