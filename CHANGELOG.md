@@ -8,4 +8,12 @@
 * Party Notes have been changed to a more chat-box or forum style. Now, instead of being an open text box, people make posts that are highlighted with their name, chosen user color, and timestamps. These are posted in reverse order, so newest on top)
 
 ### Fixed
-* Corrected several UI issues. 
+* Corrected several UI issues.
+
+## [1.3] - 2026-02-23
+
+### Added
+* Added functionality for a faction to have Hidden/hidden/HIDDEN entered. If the GM places an NPC or Location into the hidden faction, they won't display for players, and connections from other NPCs or Loctions won't display to them until they are removed from the hidden faction.
+* Gm's can now change the color of the displayed faction names to help with organization.
+* Client Side setting to enable or disable (Enabled by default) a subtle color gradiant animation to the Dossier Hub background. 
+
