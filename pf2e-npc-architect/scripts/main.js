@@ -11,6 +11,27 @@ Hooks.once('init', async () => {
         type: Object,
         default: {}
     });
+    // Register the Dossier Keybinding
+    game.keybindings.register("pf2e-npc-architect", "openDossier", {
+        name: "Open Campaign Dossier",
+        hint: "Quickly toggle the NPC Campaign Dossier open or closed.",
+        editable: [
+            { key: "KeyD", modifiers: [KeyboardManager.MODIFIER_KEYS.ALT] }
+        ],
+        onDown: () => {
+            // Look for an open dossier
+            const existingApp = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
+            
+            if (existingApp) {
+                existingApp.close(); // If it is open, close it
+            } else {
+                new NpcDossierApp().render(true); // If it is closed, open it
+            }
+            return true; 
+        },
+        restricted: false, // Allows both GMs and players to use the keybind
+        precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
+    });
 
     game.settings.register("pf2e-npc-architect", "factionOrder", {
         name: "Faction Sort Order",
@@ -18,6 +39,21 @@ Hooks.once('init', async () => {
         config: false,
         type: Array,
         default: []
+    });
+    game.settings.register("pf2e-npc-architect", "factionColors", {
+        name: "Faction Colors",
+        scope: "world",
+        config: false,
+        type: Object,
+        default: {}
+    });
+    game.settings.register("pf2e-npc-architect", "enableAnimations", {
+        name: "Enable Background Animations",
+        hint: "Toggles the breathing shadow animation on the Campaign Dossier background. Turn off for better performance.",
+        scope: "client",
+        config: true,
+        type: Boolean,
+        default: true
     });
 
     loadTemplates([

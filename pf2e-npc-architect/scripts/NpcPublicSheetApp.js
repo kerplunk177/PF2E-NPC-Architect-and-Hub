@@ -84,6 +84,13 @@ export class NpcPublicSheetApp extends FormApplication {
         for (let conn of connectionsRaw) {
             const linkedActor = game.actors.get(conn.id);
             if (linkedActor) {
+                const linkedFlags = linkedActor.getFlag("pf2e-npc-architect", "data") || {};
+                const linkedFaction = String(linkedFlags.faction || "").trim().toLowerCase();
+            
+                if (linkedFaction === "hidden" && !game.user.isGM) {
+                    continue; 
+                }
+
                 const connMystified = linkedActor.getFlag("pf2e-npc-architect", "mystified") || false;
                 resolvedConnections.push({
                     id: linkedActor.id,

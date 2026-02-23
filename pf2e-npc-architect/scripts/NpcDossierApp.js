@@ -18,6 +18,7 @@ export class NpcDossierApp extends Application {
 
     getData() {
         const trackedActors = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
+        const isAnimated = game.settings.get("pf2e-npc-architect", "enableAnimations");
 
         const cards = trackedActors.map(actor => {
             const flags = actor.getFlag("pf2e-npc-architect", "data") || {};
@@ -58,13 +59,20 @@ export class NpcDossierApp extends Application {
         });
 
         const groups = cards.reduce((acc, card) => {
-            const key = card.faction.trim() === "" ? "Unaligned" : card.faction;
+            const rawFaction = card.faction.trim();
+            const isHidden = rawFaction.toLowerCase() === "hidden";
+            
+            if (isHidden && !game.user.isGM) return acc;
+
+            const key = isHidden ? "Hidden" : (rawFaction === "" ? "Unaligned" : rawFaction);
+            
             if (!acc[key]) acc[key] = [];
             acc[key].push(card);
             return acc;
         }, {});
 
         const affWeights = { "Allied": 5, "Friendly": 4, "Neutral": 3, "???": 2, "Dislike": 1, "Enemy": 0 };
+        const savedColors = game.settings.get("pf2e-npc-architect", "factionColors") || {};
 
         let factionList = Object.keys(groups).map(key => {
             groups[key].sort((a, b) => {
@@ -77,7 +85,11 @@ export class NpcDossierApp extends Application {
                     return a.name.localeCompare(b.name); 
                 }
             });
-            return { name: key, cards: groups[key] };
+            return { 
+                name: key, 
+                color: savedColors[key] || "#e0e0e0", // Pass the saved color to the template
+                cards: groups[key] 
+            };
         });
 
         let savedOrder = game.settings.get("pf2e-npc-architect", "factionOrder") || [];
@@ -99,7 +111,8 @@ export class NpcDossierApp extends Application {
         return { 
             factionList, 
             isGM: game.user.isGM,
-            currentSort: this.currentSort 
+            currentSort: this.currentSort,
+            isAnimated: isAnimated 
         };
     }
 
@@ -209,21 +222,25 @@ export class NpcDossierApp extends Application {
             
             const sortable = currentFactions.filter(f => f !== "Unaligned");
             let savedOrder = game.settings.get("pf2e-npc-architect", "factionOrder") || [];
+            let savedColors = game.settings.get("pf2e-npc-architect", "factionColors") || {};
             
             let finalOrder = savedOrder.filter(f => sortable.includes(f)); 
             sortable.forEach(f => { if (!finalOrder.includes(f)) finalOrder.push(f); });
             
-            let listHtml = finalOrder.map(f => `
+            let listHtml = finalOrder.map(f => {
+                let fColor = savedColors[f] || "#e0e0e0";
+                return `
                 <li data-faction="${f}" style="padding:8px; border:1px solid #5a5954; margin-bottom:4px; background:rgba(0,0,0,0.3); color:#e0e0e0; border-radius:3px; display:flex; justify-content:space-between; align-items:center;">
-                    <strong>${f}</strong>
-                    <div>
+                    <strong style="color:${fColor}; text-shadow: 1px 1px 2px black;">${f}</strong>
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        <input type="color" class="faction-color-picker" value="${fColor}" title="Faction Color" style="width: 24px; height: 24px; padding: 0; border: none; cursor: pointer; background: transparent;">
                         <a class="move-up" style="cursor:pointer; padding:5px; color:#aaa;"><i class="fas fa-arrow-up"></i></a>
                         <a class="move-down" style="cursor:pointer; padding:5px; margin-left:5px; color:#aaa;"><i class="fas fa-arrow-down"></i></a>
                     </div>
                 </li>
-            `).join("");
+            `}).join("");
 
-            let content = `<p style="color:#e0e0e0;">Use the arrows to reorder how factions display in the dossier.</p>
+            let content = `<p style="color:#e0e0e0;">Reorder factions and pick their display colors.</p>
                            <ul id="faction-sort-list" style="list-style:none; padding:0; margin-bottom:15px;">${listHtml}</ul>`;
 
             new Dialog({
@@ -232,13 +249,17 @@ export class NpcDossierApp extends Application {
                 buttons: {
                     save: {
                         icon: '<i class="fas fa-save"></i>',
-                        label: "Save Order",
+                        label: "Save Changes",
                         callback: async (dHtml) => {
                             let newOrder = [];
+                            let newColors = {};
                             dHtml.find('#faction-sort-list li').each((i, el) => {
-                                newOrder.push($(el).data('faction'));
+                                let fac = $(el).data('faction');
+                                newOrder.push(fac);
+                                newColors[fac] = $(el).find('.faction-color-picker').val();
                             });
                             await game.settings.set("pf2e-npc-architect", "factionOrder", newOrder);
+                            await game.settings.set("pf2e-npc-architect", "factionColors", newColors);
                             this.render(); 
                         }
                     }
@@ -251,6 +272,9 @@ export class NpcDossierApp extends Application {
                     dHtml.find('.move-down').click(ev => {
                         let li = $(ev.currentTarget).closest('li');
                         li.insertAfter(li.next());
+                    });
+                    dHtml.find('.faction-color-picker').on('input', ev => {
+                        $(ev.currentTarget).closest('li').find('strong').css('color', ev.target.value);
                     });
                 }
             }, {

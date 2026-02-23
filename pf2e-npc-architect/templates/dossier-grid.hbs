@@ -1,4 +1,4 @@
-<div class="dossier-container">
+<div class="dossier-container {{#if isAnimated}}dossier-animated-bg{{/if}}">
     
     <div class="dossier-controls">
         <div class="control-left">
@@ -21,7 +21,9 @@
     {{#each factionList}}
         <div class="faction-group">
             <div class="faction-header">
-                <h2 class="faction-toggle"><i class="fas fa-chevron-down"></i> {{name}}</h2>
+                <h2 class="faction-toggle" style="color: {{color}}; text-shadow: 1px 1px 2px black;">
+    <i class="fas fa-chevron-down"></i> {{name}}
+</h2>
                 <hr>
             </div>
 
@@ -58,8 +60,20 @@
         overflow-y: auto;
         height: 100%;
         background: #1c1b1a; 
+        position: relative; /* Added anchor for the animation overlay */
     }
 
+   @keyframes rollingFog {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .dossier-container.dossier-animated-bg {
+        background: linear-gradient(110deg, #080808, #1c1b1a, #050505, #1a1918, #0a0a0a) !important;
+        background-size: 400% 400% !important;
+        animation: rollingFog 30s ease-in-out infinite !important;
+    }
 
     .dossier-controls {
         display: flex;
