@@ -1,0 +1,11 @@
+# Changelog
+
+## [1.0.2] - 2026-02-22
+
+### Added
+* Locations feature to track places instead of just people. (These are treated as NPC technically, but there is a specific tick box to change their functionality to remove things like affiliation.)
+  * "Treat as Location" checkbox in the GM Architect Builder.
+* Party Notes have been changed to a more chat-box or forum style. Now, instead of being an open text box, people make posts that are highlighted with their name, chosen user color, and timestamps. These are posted in reverse order, so newest on top)
+
+### Fixed
+* Corrected several UI issues. 
