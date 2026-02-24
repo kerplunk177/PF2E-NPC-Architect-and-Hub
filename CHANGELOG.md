@@ -22,3 +22,13 @@
  ### Added
 * Functionality for multiple Campaigns. Gm's can assign NPCs to a specific campaign, and then toggle between them using a dropdown box.
 * Added a keybind function to the controls options. It defaults to ALT+D
+
+## [1.5.1] - 2026-02-23
+* ###  Added
+* **Merchant Support (`loot` actors):** The NPC Architect now fully supports Merchant actors. You can now inject Merchants into the Campaign Hub, track their locations, assign them to factions, and map out their connections exactly like standard NPCs.
+* **Secret Connections:** Added a dedicated "Secret" toggle to the Relationship Tracker. GMs can now explicitly flag sensitive NPC connections to hide them completely from player views while keeping public connections visible.
+
+###  Improvements & Bug Fixes
+* **Revealed Names for Mystified Connections:** Overhauled how players view connections to unrevealed NPCs. Instead of seeing "Unknown Entity", players will now see the true name of the connected NPC, but their portrait will be safely obscured by a mystery silhouette until the GM grants them Observer permissions. 
+* **Dynamic Campaign Filter Cleanup:** Fixed an issue where NPCs with blank campaign fields were generating ghost categories (like "Main" or "Global") in the Dossier dropdown. The dropdown now strictly populates using explicitly named Campaign Arcs.
+* **UI Focus Fix on Save:** Fixed an annoyance where hitting "Save" in the Architect window would forcefully pull the Campaign Dossier to the front of the screen. The Dossier now updates its HTML quietly in the background without stealing your window focus.
