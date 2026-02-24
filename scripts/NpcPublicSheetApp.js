@@ -82,21 +82,27 @@ export class NpcPublicSheetApp extends FormApplication {
         const connectionsRaw = flags.connections || [];
         const resolvedConnections = [];
         for (let conn of connectionsRaw) {
+            // 1. Kick out secret connections if the user is a player
+            if (conn.secret && !game.user.isGM) continue;
+
             const linkedActor = game.actors.get(conn.id);
             if (linkedActor) {
                 const linkedFlags = linkedActor.getFlag("pf2e-npc-architect", "data") || {};
                 const linkedFaction = String(linkedFlags.faction || "").trim().toLowerCase();
-            
-                if (linkedFaction === "hidden" && !game.user.isGM) {
-                    continue; 
-                }
+        
+                if (linkedFaction === "hidden" && !game.user.isGM) continue;
 
                 const connMystified = linkedActor.getFlag("pf2e-npc-architect", "mystified") || false;
+                let displayImg = linkedActor.img;
+                if (!game.user.isGM && (connMystified || linkedActor.permission < CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER)) {
+                    displayImg = "icons/svg/mystery-man.svg";
+                }
                 resolvedConnections.push({
                     id: linkedActor.id,
-                    name: connMystified ? "Unknown Entity" : linkedActor.name,
-                    img: connMystified ? "icons/svg/mystery-man.svg" : linkedActor.img,
-                    label: conn.label
+                    name: linkedActor.name, 
+                    img: displayImg,
+                    label: conn.label,
+                    isSecret: conn.secret
                 });
             }
         }

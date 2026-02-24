@@ -21,8 +21,8 @@ export class NpcDossierApp extends Application {
 
         const campaigns = ["All", ...new Set(allTracked.map(a => {
             const c = a.getFlag("pf2e-npc-architect", "data")?.campaign;
-            return (c && c.trim() !== "") ? c : "Main";
-        }))].sort();
+            return c ? c.trim() : "";
+        }).filter(c => c !== ""))].sort();
 
 
         const currentCampaign = game.settings.get("pf2e-npc-architect", "activeCampaign") || "All";
@@ -37,7 +37,7 @@ export class NpcDossierApp extends Application {
 
         const trackedActors = allTracked.filter(a => {
             if (currentCampaign === "All") return true;
-            const c = a.getFlag("pf2e-npc-architect", "data")?.campaign || "Global";
+            const c = a.getFlag("pf2e-npc-architect", "data")?.campaign?.trim() || "";
             return c === currentCampaign;
         });
 
@@ -68,6 +68,30 @@ export class NpcDossierApp extends Application {
                 else if (num <= -30) { affLabel = "Dislike"; affClass = "dislike"; }
             }
 
+
+            const rawConnections = flags.connections || [];
+            const processedConnections = rawConnections.map(c => {
+                if (c.secret && !game.user.isGM) return null;
+
+                const connActor = game.actors.get(c.id);
+                if (!connActor) return null;
+
+                const realName = connActor.name;
+
+                let displayImg = connActor.img;
+                if (!game.user.isGM && connActor.permission < CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER) {
+                    displayImg = "icons/svg/mystery-man.svg";
+                }
+
+                return {
+                    id: c.id,
+                    label: c.label,
+                    name: realName,
+                    img: displayImg,
+                    isSecret: c.secret
+                };
+            }).filter(c => c !== null);
+
             return {
                 id: actor.id,
                 name: actor.name, 
@@ -79,7 +103,8 @@ export class NpcDossierApp extends Application {
                 faction: isLocation ? "Locations" : (flags.faction || "Unaligned"), 
                 affiliation: affLabel,
                 affClass: affClass, 
-                blurb: flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details.")
+                blurb: flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details."),
+                connections: processedConnections 
             };
         });
 

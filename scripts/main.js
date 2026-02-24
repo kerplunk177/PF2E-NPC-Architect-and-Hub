@@ -11,7 +11,6 @@ Hooks.once('init', async () => {
         type: Object,
         default: {}
     });
-    // Register the Dossier Keybinding
     game.keybindings.register("pf2e-npc-architect", "openDossier", {
         name: "Open Campaign Dossier",
         hint: "Quickly toggle the NPC Campaign Dossier open or closed.",
@@ -19,27 +18,26 @@ Hooks.once('init', async () => {
             { key: "KeyD", modifiers: [KeyboardManager.MODIFIER_KEYS.ALT] }
         ],
         onDown: () => {
-            // Look for an open dossier
+
             const existingApp = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
             
             if (existingApp) {
-                existingApp.close(); // If it is open, close it
+                existingApp.close(); 
             } else {
-                new NpcDossierApp().render(true); // If it is closed, open it
+                new NpcDossierApp().render(true); 
             }
             return true; 
         },
-        restricted: false, // Allows both GMs and players to use the keybind
+        restricted: false, 
         precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
     });
     game.settings.register("pf2e-npc-architect", "activeCampaign", {
         name: "Active Campaign Sync",
-        scope: "world", // Forces this to sync across all clients
-        config: false,  // Hides it from the normal settings menu
+        scope: "world", 
+        config: false,  
         type: String,
         default: "All",
         onChange: () => {
-            // Force the dossier to re-render for everyone when the GM changes it
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
             if (dossier) dossier.render(false);
         }

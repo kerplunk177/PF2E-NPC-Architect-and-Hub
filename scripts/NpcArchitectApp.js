@@ -111,13 +111,14 @@ export class NpcArchitectApp extends FormApplication {
             formData.campaign = String(camp || "Global").trim();
             formData.faction = String(fac || "").trim();
             formData.affiliation = String(aff || "Neutral").trim();
-            
             const connections = [];
             this.element.find('.connection-row').each((i, row) => {
                 const id = $(row).find('.conn-id').val();
                 const label = $(row).find('.conn-label').val().trim();
+                const isSecret = $(row).find('.conn-secret').is(':checked'); 
+                
                 if (id && label) {
-                    connections.push({ id, label });
+                    connections.push({ id: id, label: label, secret: isSecret });
                 }
             });
             formData.connections = connections;
@@ -125,7 +126,7 @@ export class NpcArchitectApp extends FormApplication {
             await this.actor.setFlag("pf2e-npc-architect", "data", formData);
             
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
-            if (dossier) dossier.render(true);
+            if (dossier) dossier.render(false);
         }
     }
 
