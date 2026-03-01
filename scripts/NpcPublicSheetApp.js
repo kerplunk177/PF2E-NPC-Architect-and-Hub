@@ -1,7 +1,14 @@
 export class NpcPublicSheetApp extends FormApplication {
-    constructor(actor) {
-        super();
-        this.actor = actor;
+    constructor(actor, options) {
+        super(actor, options);
+        this.actor = actor; 
+        const savedPos = game.user?.getFlag("pf2e-npc-architect", "publicSheetBounds");
+        if (savedPos) {
+            this.position.width = savedPos.width;
+            this.position.height = savedPos.height;
+            this.position.left = savedPos.left;
+            this.position.top = savedPos.top;
+        }
     }
 
     static get defaultOptions() {
@@ -15,6 +22,15 @@ export class NpcPublicSheetApp extends FormApplication {
             closeOnSubmit: false,
             resizable: true
         });
+    }
+    async close(options) {
+        await game.user.setFlag("pf2e-npc-architect", "publicSheetBounds", {
+            width: this.position.width,
+            height: this.position.height,
+            left: this.position.left,
+            top: this.position.top
+        });
+        return super.close(options);
     }
 
     get id() {
