@@ -2,6 +2,13 @@ export class NpcDossierApp extends Application {
     constructor(options) {
         super(options);
         this.currentSort = "affiliation";
+        const savedPos = game.user?.getFlag("pf2e-npc-architect", "dossierBounds");
+        if (savedPos) {
+            this.position.width = savedPos.width;
+            this.position.height = savedPos.height;
+            this.position.left = savedPos.left;
+            this.position.top = savedPos.top;
+        }
     }
 
     static get defaultOptions() {
@@ -15,6 +22,18 @@ export class NpcDossierApp extends Application {
             resizable: true
         });
     }
+
+    async close(options) {
+        await game.user.setFlag("pf2e-npc-architect", "dossierBounds", {
+            width: this.position.width,
+            height: this.position.height,
+            left: this.position.left,
+            top: this.position.top
+        });
+        return super.close(options);
+    }
+
+
 
     getData() {
         const allTracked = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
@@ -76,10 +95,11 @@ export class NpcDossierApp extends Application {
                 const connActor = game.actors.get(c.id);
                 if (!connActor) return null;
 
+                const connMystified = connActor.getFlag("pf2e-npc-architect", "mystified") || false;
                 const realName = connActor.name;
 
                 let displayImg = connActor.img;
-                if (!game.user.isGM && connActor.permission < CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER) {
+                if (!game.user.isGM && connMystified) {
                     displayImg = "icons/svg/mystery-man.svg";
                 }
 
