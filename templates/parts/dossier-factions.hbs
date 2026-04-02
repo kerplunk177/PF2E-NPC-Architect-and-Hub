@@ -1,0 +1,36 @@
+<div class="factions-wrapper {{#if isAnimated}}dossier-animated-bg{{/if}}" style="height: 100%; overflow-y: auto;">
+    {{#each factionList}}
+        <div class="faction-group">
+            <div class="faction-header">
+                <h2 class="faction-toggle" style="color: {{color}}; text-shadow: 1px 1px 2px black;">
+                    <i class="fas fa-chevron-down"></i> {{name}}
+                </h2>
+                <hr>
+            </div>
+
+            <div class="dossier-grid">
+                {{#each cards}}
+                <div class="dossier-card" data-id="{{id}}" draggable="true">
+                    <div class="card-image">
+                        <img src="{{img}}">
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">{{name}}</h3>
+                        <div class="card-meta">
+                            {{#unless isLocation}}
+                            <span class="aff-badge {{affClass}}">{{affiliation}}</span>
+                            {{/unless}}
+                        </div>
+                        <p class="card-blurb"><em>{{blurb}}</em></p>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    {{else}}
+        <div class="empty-state">
+            <p>No NPCs tracked.</p> 
+            <p><small>Open an NPC sheet -> Architect -> Check "Track in Hub".</small></p>
+        </div>
+    {{/each}}
+</div>
