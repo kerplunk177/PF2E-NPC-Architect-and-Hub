@@ -95,9 +95,9 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                         });
                         await game.settings.set("pf2e-npc-architect", "factionOrder", newOrder);
                         await game.settings.set("pf2e-npc-architect", "factionColors", newColors);
-                        // In a static action handler, we need to find the open app to render it
-                        const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
-                        if (dossier) dossier.render(); 
+                        // V2 Target: Refresh Dossier after changing Factions
+                        const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
+                        if (dossier) dossier.render(false);
                     }
                 }
             },
@@ -180,11 +180,25 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     id: c.id, label: c.label, name: realName, img: displayImg, isSecret: c.secret
                 };
             }).filter(c => c !== null);
+            const status = flags.status || "Alive";
+            let displayName = actor.name;
+            let statusClass = ""; 
 
+            if (status === "Deceased") {
+                displayName += " (Deceased)";
+                statusClass = "status-deceased";
+            } else if (status === "Missing") {
+                displayName += " (Missing)";
+                statusClass = "status-missing";
+            }
+
+            // This is inside the cards.map loop!
             return {
                 id: actor.id,
-                name: actor.name, 
+                name: displayName,
                 img: isMystified ? "icons/svg/mystery-man.svg" : actor.img,
+                status: status, // <-- ADD THIS LINE RIGHT HERE
+                statusClass: statusClass,
                 role: flags.role || "Unknown",
                 campaignOptions: campaignOptions,
                 activeCampaign: currentCampaign,
@@ -261,7 +275,21 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     _onRender(context, options) {
         super._onRender(context, options);
         
+        // Unstoppable Native Override: Runs post-sanitization
+        const deceased = this.element.querySelectorAll('.status-deceased');
+        for (let img of deceased) {
+            img.style.filter = 'grayscale(100%) contrast(1.1)';
+            img.style.opacity = '0.6';
+        }
+
+        const missing = this.element.querySelectorAll('.status-missing');
+        for (let img of missing) {
+            img.style.filter = 'sepia(60%) hue-rotate(180deg)';
+            img.style.opacity = '0.8';
+        }
+
         const html = $(this.element);
+        // ... (Keep all your click listeners below this exactly as they are)
 
         html.find('.card-image').click(ev => {
             ev.stopPropagation(); 

@@ -27,12 +27,19 @@ export class NpcArchitectApp extends FormApplication {
         const data = super.getData();
         const flags = this.actor.getFlag("pf2e-npc-architect", "data") || {};
         
+        // Safely pack the status logic into the main data object
+        data.currentStatus = flags.status || "Alive";
+        data.statusOptions = {
+            "Alive": "Alive",
+            "Missing": "Missing",
+            "Deceased": "Deceased"
+        };
+        
         data.actor = this.actor;
         data.tracked = flags.tracked || false;
         data.isLocation = flags.isLocation || false;
         data.campaign = flags.campaign || "Global";
         data.faction = flags.faction || "";
-
 
         data.affiliations = {
             "Allied": "Allied",
@@ -76,7 +83,6 @@ export class NpcArchitectApp extends FormApplication {
         data.bioPublic = flags.bioPublic || "";
         data.bioSecret = flags.bioSecret || ""; 
 
-     
         let eligibleActors = [];
         game.actors.forEach(a => {
             if (a.id === this.actor.id) return; 
@@ -96,7 +102,12 @@ export class NpcArchitectApp extends FormApplication {
 
         data.connections = flags.connections || [];
         
-        return data;
+        // The Magic Bullet Return Block
+        return {
+            actor: this.actor,
+            data: data,
+            ...data // Copies everything inside 'data' to the root so Handlebars can never miss it
+        };
     }
 
     async _updateObject(event, formData) {
@@ -111,6 +122,10 @@ export class NpcArchitectApp extends FormApplication {
             formData.campaign = String(camp || "Global").trim();
             formData.faction = String(fac || "").trim();
             formData.affiliation = String(aff || "Neutral").trim();
+            
+            // Force the status from the DOM into the save payload
+            formData.status = this.element.find('[name="status"]').val() || "Alive";
+
             const connections = [];
             this.element.find('.connection-row').each((i, row) => {
                 const id = $(row).find('.conn-id').val();
@@ -123,15 +138,21 @@ export class NpcArchitectApp extends FormApplication {
             });
             formData.connections = connections;
             
+            // Save the complete object
             await this.actor.setFlag("pf2e-npc-architect", "data", formData);
-            
-            const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
+
+            // V2 Target: Ping the Dossier in the correct instance registry
+            const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
             if (dossier) dossier.render(false);
         }
     }
 
     activateListeners(html) {
+        // Force the status dropdown to match the database on load
+        const currentData = this.actor.getFlag("pf2e-npc-architect", "data") || {};
+        html.find('[name="status"]').val(currentData.status || "Alive");
         super.activateListeners(html);
+       
 
         html.find('.apply-scaling-btn').click(async (event) => {
             event.preventDefault(); 
@@ -175,11 +196,18 @@ export class NpcArchitectApp extends FormApplication {
 
             const newRow = `
                 <div class="connection-row" style="display:flex; gap:10px; margin-bottom: 8px; align-items:center;">
-                    <select class="conn-id" style="flex: 1;">
+                    <select class="conn-id" style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; padding: 4px;">
                         <option value="">-- Select Actor --</option>
                         ${optionsHtml}
                     </select>
-                    <input type="text" class="conn-label" placeholder="e.g. Brother, Sworn Rival" style="flex: 1;">
+                    <input type="text" class="conn-label" placeholder="e.g. Brother, Sworn Rival" style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; padding: 4px;">
+                    
+                    <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.4); padding:4px 8px; border:1px solid #4b4a44; border-radius:4px; cursor:pointer;">
+                        <input type="checkbox" class="conn-secret" style="margin:0; width:14px; height:14px;">
+                        <i class="fas fa-user-secret" style="color:#e0e0e0;"></i> 
+                        <span style="font-size:12px; color:#e0e0e0;">Secret</span>
+                    </label>
+
                     <button type="button" class="remove-connection-btn" style="flex: 0 0 30px; padding:0; height:30px;"><i class="fas fa-trash"></i></button>
                 </div>
             `;

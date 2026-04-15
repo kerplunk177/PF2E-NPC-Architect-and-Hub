@@ -10,9 +10,9 @@
 
             <div class="dossier-grid">
                 {{#each cards}}
-                <div class="dossier-card" data-id="{{id}}" draggable="true">
+                <div class="dossier-card" data-id="{{id}}" data-status="{{status}}" draggable="true">
                     <div class="card-image">
-                        <img src="{{img}}">
+                        <img src="{{img}}" class="card-image {{statusClass}}" alt="{{name}}">
                     </div>
                     <div class="card-content">
                         <h3 class="card-title">{{name}}</h3>

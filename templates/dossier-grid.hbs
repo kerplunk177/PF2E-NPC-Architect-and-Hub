@@ -37,9 +37,9 @@
 
             <div class="dossier-grid">
                 {{#each cards}}
-                <div class="dossier-card" data-id="{{id}}" draggable="true">
+                <div class="dossier-card" data-id="{{id}}" data-status="{{status}}" draggable="true">
                     <div class="card-image">
-                        <img src="{{img}}">
+                        <img src="{{img}}" class="{{statusClass}}" alt="{{name}}">
                     </div>
                     <div class="card-content">
                         <h3 class="card-title">{{name}}</h3>
@@ -289,5 +289,14 @@
         background: rgba(255,255,255,0.2) !important;
         color: #fff !important;
         box-shadow: 0 0 5px rgba(255,255,255,0.2) !important;
+    }
+    .status-deceased {
+        filter: grayscale(100%) contrast(1.1) !important;
+        opacity: 0.6 !important;
+    }
+
+    .status-missing {
+        filter: sepia(60%) hue-rotate(180deg) !important;
+        opacity: 0.8 !important;
     }
 </style>
