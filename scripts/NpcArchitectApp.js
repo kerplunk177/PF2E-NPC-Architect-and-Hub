@@ -9,7 +9,7 @@ export class NpcArchitectApp extends FormApplication {
     }
 
     static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
+        return foundry.utils.mergeObject(super.defaultOptions, {
             id: "pf2e-npc-architect-app",
             title: "NPC Architect",
             template: "modules/pf2e-npc-architect/templates/hub-shell.hbs",

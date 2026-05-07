@@ -12,7 +12,7 @@ export class NpcPublicSheetApp extends FormApplication {
     }
 
     static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
+        return foundry.utils.mergeObject(super.defaultOptions, {
             title: "NPC File",
             template: "modules/pf2e-npc-architect/templates/public-sheet.hbs",
             width: 700,
