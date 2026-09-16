@@ -26,6 +26,7 @@ const LEVEL_MATRICES = {
     23: { hp: { h: 575, m: 460, l: 345 }, ac: { h: 49, m: 48, l: 46 }, atk: { h: 42, m: 41 }, dmg: { h: 59, m: 50, l: 40 } },
     24: { hp: { h: 633, m: 500, l: 375 }, ac: { h: 51, m: 50, l: 48 }, atk: { h: 44, m: 43 }, dmg: { h: 62, m: 52, l: 42 } }
 };
+
 const ROLES = {
     soldier: { hp: 'h', ac: 'h', atk: 'h', dmg: 'h', fort: 'h', ref: 'm', will: 'l', per: 'm' },
     brute:   { hp: 'h', ac: 'l', atk: 'h', dmg: 'h', fort: 'h', ref: 'l', will: 'm', per: 'l' },
@@ -33,12 +34,14 @@ const ROLES = {
     caster:  { hp: 'l',  ac: 'l', atk: 'm', dmg: 'l', fort: 'l', ref: 'm', will: 'h', per: 'm' },
     boss:    { hp: 'h', ac: 'h', atk: 'h', dmg: 'h', fort: 'h', ref: 'h', will: 'h', per: 'h' }
 };
+
 const SKILL_MAP = {
     "acrobatics": "acr", "arcana": "arc", "athletics": "ath", "crafting": "cra",
     "deception": "dec", "diplomacy": "dip", "intimidation": "itm", "medicine": "med",
     "nature": "nat", "occultism": "occ", "performance": "prf", "religion": "rel",
     "society": "soc", "stealth": "ste", "survival": "sur", "thievery": "thi",
 };
+
 export async function updateNpcStats(actor, targetLevel, roleKey) {
     if (actor._isArchitectScaling) {
         ui.notifications.warn("NPC Architect: Processing update, please wait...");
@@ -87,9 +90,15 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
         }
     }
 
-    if (!blueprint) return ui.notifications.error("NPC Architect: No data found.");
+    if (!blueprint) {
+        actor._isArchitectScaling = false;
+        return ui.notifications.error("NPC Architect: No data found.");
+    }
     const matrix = LEVEL_MATRICES[targetLevel];
-    if (!matrix) return ui.notifications.error("NPC Architect: Level out of bounds.");
+    if (!matrix) {
+        actor._isArchitectScaling = false;
+        return ui.notifications.error("NPC Architect: Level out of bounds.");
+    }
 
     const updateData = {
         "system.details.level.value": parseInt(targetLevel),
@@ -126,7 +135,6 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
         }
     }
 
-    
     const spellcastingEntries = actor.items.filter(i => i.type === "spellcastingEntry");
     if (spellcastingEntries.length > 0) {
         const targetSpellAttack = matrix.atk[blueprint.atk || 'h'];
@@ -140,8 +148,6 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
         
         await actor.updateEmbeddedDocuments("Item", spellUpdates);
     }
-
-
 
     const strikes = actor.items.filter(i => i.type === "melee");
     
@@ -189,13 +195,13 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
         
         const dialogContent = `
             <style>
-                .forge-dark-dialog.window-app .window-content {
+                .pf2e-npc-architect.forge-dark-dialog.window-app .window-content {
                     background: #1c1b1a !important;
                     background-image: none !important;
                     color: #e0e0e0;
                     border: 1px solid #4b4a44;
                 }
-                .forge-dark-dialog .dialog-buttons button {
+                .pf2e-npc-architect.forge-dark-dialog .dialog-buttons button {
                     background: rgba(255,255,255,0.1) !important;
                     color: #e0e0e0 !important;
                     border: 1px solid #5a5954 !important;
@@ -203,7 +209,7 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
                     transition: all 0.2s ease;
                     cursor: pointer;
                 }
-                .forge-dark-dialog .dialog-buttons button:hover {
+                .pf2e-npc-architect.forge-dark-dialog .dialog-buttons button:hover {
                     background: rgba(255,255,255,0.2) !important;
                     color: #fff !important;
                     box-shadow: 0 0 5px rgba(255,255,255,0.2) !important;
@@ -469,9 +475,14 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
                     label: "Skip"
                 }
             },
-            default: "forge"
+            default: "forge",
+            render: (dHtml) => {
+                // The Copy/Paste fix for the dialog inputs
+                dHtml.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+            }
         }, {
-            classes: ["dialog", "forge-dark-dialog"] 
+            // Appending pf2e-npc-architect so the scoped CSS applies flawlessly
+            classes: ["pf2e-npc-architect", "dialog", "forge-dark-dialog"] 
         }).render(true);
     }
 
@@ -483,12 +494,11 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
             }
         });
 
-
         itemsToFetch.reverse();
 
         if (itemsToFetch.length > 0 || customArchetypeDef.isCaster) {
             let entryId = null;
-  
+ 
             const itemsToCreate = [];
             const itemsToDelete = new Set(); 
             const processedItemNames = new Set(); 
@@ -535,7 +545,6 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
                         const incomingRank = req.rank ? parseInt(req.rank) : (sourceItem.system?.level?.value || 1);
                         const spellKey = `${sourceItem.name}-${incomingRank}`;
                         
-
                         const exactDuplicates = actor.items.filter(i => 
                             i.name === sourceItem.name && 
                             i.type === "spell" &&
@@ -595,13 +604,12 @@ export async function updateNpcStats(actor, targetLevel, roleKey) {
     }
     
     actor._isArchitectScaling = false;
-
 }
+
 export async function quickForge(actor) {
     const targetLevel = actor.system.details.level.value || 0;
     const matrix = LEVEL_MATRICES[targetLevel];
     if (!matrix) return ui.notifications.error("NPC Architect: Level out of bounds.");
-
 
     const targetAttackBonus = matrix.atk['h'];
     const targetAvgDamage = matrix.dmg['h'];
@@ -610,9 +618,9 @@ export async function quickForge(actor) {
 
     const dialogContent = `
         <style>
-            .forge-dark-dialog.window-app .window-content { background: #1c1b1a !important; background-image: none !important; color: #e0e0e0; border: 1px solid #4b4a44; }
-            .forge-dark-dialog .dialog-buttons button { background: rgba(255,255,255,0.1) !important; color: #e0e0e0 !important; border: 1px solid #5a5954 !important; text-shadow: none !important; transition: all 0.2s ease; cursor: pointer; }
-            .forge-dark-dialog .dialog-buttons button:hover { background: rgba(255,255,255,0.2) !important; color: #fff !important; box-shadow: 0 0 5px rgba(255,255,255,0.2) !important; }
+            .pf2e-npc-architect.forge-dark-dialog.window-app .window-content { background: #1c1b1a !important; background-image: none !important; color: #e0e0e0; border: 1px solid #4b4a44; }
+            .pf2e-npc-architect.forge-dark-dialog .dialog-buttons button { background: rgba(255,255,255,0.1) !important; color: #e0e0e0 !important; border: 1px solid #5a5954 !important; text-shadow: none !important; transition: all 0.2s ease; cursor: pointer; }
+            .pf2e-npc-architect.forge-dark-dialog .dialog-buttons button:hover { background: rgba(255,255,255,0.2) !important; color: #fff !important; box-shadow: 0 0 5px rgba(255,255,255,0.2) !important; }
         </style>
         <form autocomplete="off">
             <p style="color:#e0e0e0;">Forge a quick weapon using High target math for Level ${targetLevel} <strong>(${targetAvgDamage} avg damage, +${targetAttackBonus} to hit)</strong>.</p>
@@ -684,6 +692,13 @@ export async function quickForge(actor) {
             },
             cancel: { icon: '<i class="fas fa-times"></i>', label: "Cancel" }
         },
-        default: "forge"
-    }, { classes: ["dialog", "forge-dark-dialog"] }).render(true);
+        default: "forge",
+        render: (dHtml) => {
+            // The Copy/Paste fix for the dialog inputs
+            dHtml.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+        }
+    }, { 
+        // Appending pf2e-npc-architect so the scoped CSS applies flawlessly
+        classes: ["pf2e-npc-architect", "dialog", "forge-dark-dialog"] 
+    }).render(true);
 }

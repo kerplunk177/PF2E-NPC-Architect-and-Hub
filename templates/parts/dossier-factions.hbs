@@ -1,4 +1,4 @@
-<div class="factions-wrapper {{#if isAnimated}}dossier-animated-bg{{/if}}" style="height: 100%; overflow-y: auto;">
+<div class="factions-wrapper" style="height: 100%; overflow-y: auto; padding-right: 5px;">
     {{#each factionList}}
         <div class="faction-group">
             <div class="faction-header">
@@ -12,7 +12,7 @@
                 {{#each cards}}
                 <div class="dossier-card" data-id="{{id}}" data-status="{{status}}" draggable="true">
                     <div class="card-image">
-                        <img src="{{img}}" class="card-image {{statusClass}}" alt="{{name}}">
+                        <img src="{{img}}" class="{{statusClass}}" alt="{{name}}">
                     </div>
                     <div class="card-content">
                         <h3 class="card-title">{{name}}</h3>

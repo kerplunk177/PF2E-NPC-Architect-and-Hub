@@ -14,11 +14,11 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     static DEFAULT_OPTIONS = {
         id: "npc-dossier-hub",
         tag: "div", 
-        classes: ["pf2e-npc-architect"],
+        classes: ["pf2e-npc-architect"], // CSS Namespace is perfectly intact here
         window: {
             title: "Campaign Dossier",
             resizable: true,
-            contentClasses: ["dossier-container"] // Applies the CSS class below
+            contentClasses: ["dossier-container"]
         },
         position: {
             width: 900,
@@ -29,7 +29,6 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
     };
 
-    // V2 MAGIC: This MUST be its own static property!
     static PARTS = {
         controls: { template: "modules/pf2e-npc-architect/templates/parts/dossier-controls.hbs" },
         grid: { template: "modules/pf2e-npc-architect/templates/parts/dossier-factions.hbs" }
@@ -44,11 +43,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
     }
 
-    /**
-     * V2 Action Handler: Opens the Faction Management Dialog
-     */
     static async #manageFactionsDialog(event, target) {
-        // Here is where your Faction Dialog logic actually belongs in V2
         const actors = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
         const currentFactions = [...new Set(actors.map(a => {
             const f = a.getFlag("pf2e-npc-architect", "data")?.faction;
@@ -95,13 +90,16 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                         });
                         await game.settings.set("pf2e-npc-architect", "factionOrder", newOrder);
                         await game.settings.set("pf2e-npc-architect", "factionColors", newColors);
-                        // V2 Target: Refresh Dossier after changing Factions
+                        
                         const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
                         if (dossier) dossier.render(false);
                     }
                 }
             },
             render: (dHtml) => {
+                // The Copy/Paste fix for the dialog
+                dHtml.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+
                 dHtml.find('.move-up').click(ev => {
                     let li = $(ev.currentTarget).closest('li');
                     li.insertBefore(li.prev());
@@ -115,7 +113,8 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 });
             }
         }, {
-            classes: ["dialog", "dossier-dark-dialog"] 
+            // CSS Namespacing added to the dialog window classes
+            classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"] 
         }).render(true);
     }
 
@@ -180,6 +179,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     id: c.id, label: c.label, name: realName, img: displayImg, isSecret: c.secret
                 };
             }).filter(c => c !== null);
+
             const status = flags.status || "Alive";
             let displayName = actor.name;
             let statusClass = ""; 
@@ -192,12 +192,11 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 statusClass = "status-missing";
             }
 
-            // This is inside the cards.map loop!
             return {
                 id: actor.id,
                 name: displayName,
                 img: isMystified ? "icons/svg/mystery-man.svg" : actor.img,
-                status: status, // <-- ADD THIS LINE RIGHT HERE
+                status: status, 
                 statusClass: statusClass,
                 role: flags.role || "Unknown",
                 campaignOptions: campaignOptions,
@@ -275,7 +274,6 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     _onRender(context, options) {
         super._onRender(context, options);
         
-        // Unstoppable Native Override: Runs post-sanitization
         const deceased = this.element.querySelectorAll('.status-deceased');
         for (let img of deceased) {
             img.style.filter = 'grayscale(100%) contrast(1.1)';
@@ -289,7 +287,9 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
 
         const html = $(this.element);
-        // ... (Keep all your click listeners below this exactly as they are)
+
+        // The Copy/Paste Fix for your Dossier search bar
+        html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
 
         html.find('.card-image').click(ev => {
             ev.stopPropagation(); 

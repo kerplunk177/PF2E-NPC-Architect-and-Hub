@@ -1,6 +1,7 @@
+<div class="architect-wrapper" style="height: 100%; display: flex; flex-direction: column;">
 <form autocomplete="off" class="architect-dark-theme">
     <header class="architect-header">
-        <img src="{{actor.img}}" title="{{actor.name}}" height="64" width="64" style="border: 2px solid #5a5954; border-radius: 5px;"/>
+        <img src="{{actor.img}}" title="{{actor.name}}" height="64" width="64" style="border: 2px solid #5a5954; border-radius: 5px; object-fit: cover;"/>
         <div style="margin-left: 10px;">
             <h1 style="border:none; margin:0;">{{actor.name}}</h1>
             <p style="margin: 0; color: #ccc;">Level {{actor.system.details.level.value}} {{currentRole}}</p>
@@ -168,7 +169,7 @@
 </form>
 
 <style>
-    .architect-dark-theme {
+    .pf2e-npc-architect .architect-dark-theme {
         background: #1c1b1a;
         color: #e0e0e0;
         padding: 10px;
@@ -176,38 +177,41 @@
         box-sizing: border-box;
     }
 
-    .architect-dark-theme h1, 
-    .architect-dark-theme h2, 
-    .architect-dark-theme h3, 
-    .architect-dark-theme label {
+    .pf2e-npc-architect .architect-dark-theme h1, 
+    .pf2e-npc-architect .architect-dark-theme h2, 
+    .pf2e-npc-architect .architect-dark-theme h3, 
+    .pf2e-npc-architect .architect-dark-theme label {
         color: #e0e0e0;
     }
-
-    .architect-dark-theme .architect-nav {
+    .pf2e-npc-architect .architect-dark-theme select option {
+        background: #ffffff;
+        color: #111111;
+    }
+    .pf2e-npc-architect .architect-dark-theme .architect-nav {
         border-bottom: 2px solid #5a5954;
         margin-bottom: 15px;
     }
 
-    .architect-dark-theme .architect-nav .item {
+    .pf2e-npc-architect .architect-dark-theme .architect-nav .item {
         color: #888;
     }
 
-    .architect-dark-theme .architect-nav .item.active {
+    .pf2e-npc-architect .architect-dark-theme .architect-nav .item.active {
         color: #fff;
         text-shadow: 0 0 5px rgba(255,255,255,0.3);
     }
 
-    .architect-dark-theme hr {
+    .pf2e-npc-architect .architect-dark-theme hr {
         border: 0;
         height: 2px;
         background: #5a5954;
         margin: 15px 0;
     }
 
-    .architect-dark-theme input[type="text"], 
-    .architect-dark-theme input[type="number"], 
-    .architect-dark-theme select, 
-    .architect-dark-theme .tile-input {
+    .pf2e-npc-architect .architect-dark-theme input[type="text"], 
+    .pf2e-npc-architect .architect-dark-theme input[type="number"], 
+    .pf2e-npc-architect .architect-dark-theme select, 
+    .pf2e-npc-architect .architect-dark-theme .tile-input {
         background: rgba(255, 255, 255, 0.9);
         color: #111;
         border: 1px solid #4b4a44;
@@ -217,22 +221,22 @@
         border-radius: 3px;
     }
 
-    .architect-dark-theme .dark-textarea {
+    .pf2e-npc-architect .architect-dark-theme .dark-textarea {
         background: rgba(255, 255, 255, 0.6); 
     }
 
-    .architect-dark-theme .dark-panel {
+    .pf2e-npc-architect .architect-dark-theme .dark-panel {
         background: rgba(255, 255, 255, 0.05);
         padding: 10px;
         border-radius: 4px;
         border: 1px solid #333;
     }
     
-    .architect-dark-theme .builder-grid-header {
+    .pf2e-npc-architect .architect-dark-theme .builder-grid-header {
         border-color: #444;
     }
 
-    .architect-dark-theme button {
+    .pf2e-npc-architect .architect-dark-theme button {
         background: rgba(255, 255, 255, 0.1) !important;
         color: #e0e0e0 !important;
         border: 1px solid #5a5954 !important;
@@ -240,30 +244,31 @@
         cursor: pointer;
     }
 
-    .architect-dark-theme button i {
+    .pf2e-npc-architect .architect-dark-theme button i {
         color: #e0e0e0 !important;
     }
 
-    .architect-dark-theme button:hover {
+    .pf2e-npc-architect .architect-dark-theme button:hover {
         background: rgba(255, 255, 255, 0.2) !important;
         color: #fff !important;
         box-shadow: 0 0 5px rgba(255, 255, 255, 0.2) !important;
     }
 
-    .architect-dark-theme button:hover i {
+    .pf2e-npc-architect .architect-dark-theme button:hover i {
         color: #fff !important;
     }
 
-    .architect-dark-theme .remove-connection-btn i {
+    .pf2e-npc-architect .architect-dark-theme .remove-connection-btn i {
         color: #ff8888 !important;
     }
     
-    .architect-dark-theme .remove-connection-btn:hover {
+    .pf2e-npc-architect .architect-dark-theme .remove-connection-btn:hover {
         background: rgba(255, 0, 0, 0.2) !important;
         border-color: #ff8888 !important;
     }
 
-    .architect-dark-theme .remove-connection-btn:hover i {
+    .pf2e-npc-architect .architect-dark-theme .remove-connection-btn:hover i {
         color: #ffaaaa !important;
     }
 </style>
+</div>

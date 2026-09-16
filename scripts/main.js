@@ -11,6 +11,7 @@ Hooks.once('init', async () => {
         type: Object,
         default: {}
     });
+    
     game.keybindings.register("pf2e-npc-architect", "openDossier", {
         name: "Open Campaign Dossier",
         hint: "Quickly toggle the NPC Campaign Dossier open or closed.",
@@ -18,19 +19,19 @@ Hooks.once('init', async () => {
             { key: "KeyD", modifiers: [KeyboardManager.MODIFIER_KEYS.ALT] }
         ],
         onDown: () => {
-
             const existingApp = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
             
             if (existingApp) {
                 existingApp.close(); 
             } else {
-                new NpcDossierApp().render(true); 
+                new NpcDossierApp().render({ force: true }); 
             }
             return true; 
         },
         restricted: false, 
         precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
     });
+    
     game.settings.register("pf2e-npc-architect", "activeCampaign", {
         name: "Active Campaign Sync",
         scope: "world", 
@@ -39,7 +40,7 @@ Hooks.once('init', async () => {
         default: "All",
         onChange: () => {
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
-            if (dossier) dossier.render(false);
+            if (dossier) dossier.render(); // V2 natively handles surgical part updates
         }
     });
 
@@ -50,6 +51,7 @@ Hooks.once('init', async () => {
         type: Array,
         default: []
     });
+    
     game.settings.register("pf2e-npc-architect", "factionColors", {
         name: "Faction Colors",
         scope: "world",
@@ -57,6 +59,7 @@ Hooks.once('init', async () => {
         type: Object,
         default: {}
     });
+    
     game.settings.register("pf2e-npc-architect", "enableAnimations", {
         name: "Enable Background Animations",
         hint: "Toggles the breathing shadow animation on the Campaign Dossier background. Turn off for better performance.",
@@ -66,9 +69,11 @@ Hooks.once('init', async () => {
         default: true
     });
 
+    // Pre-cache the newly sliced V2 parts for instant loading
     loadTemplates([
         "modules/pf2e-npc-architect/templates/hub-shell.hbs",
-        "modules/pf2e-npc-architect/templates/dossier-grid.hbs",
+        "modules/pf2e-npc-architect/templates/parts/dossier-controls.hbs",
+        "modules/pf2e-npc-architect/templates/parts/dossier-factions.hbs",
         "modules/pf2e-npc-architect/templates/public-sheet.hbs" 
     ]);
 });
@@ -84,11 +89,12 @@ Hooks.once("ready", async () => {
             });
         }
     }
+    
     game.socket.on("module.pf2e-npc-architect", (data) => {
         if (data.action === "forceRefresh") {
             Object.values(ui.windows).forEach(w => {
                 if (w.id === "npc-dossier-hub" || w.id.startsWith("public-sheet-")) {
-                    w.render(true);
+                    w.render({ force: true });
                 }
             });
         }
@@ -97,13 +103,14 @@ Hooks.once("ready", async () => {
 
 Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
     if (!game.user.isGM) return;
-if (sheet.actor.type !== "npc" && sheet.actor.type !== "loot") return;
+    if (sheet.actor.type !== "npc" && sheet.actor.type !== "loot") return;
 
     buttons.unshift({
         label: "", 
         class: "pf2e-npc-architect-btn",
         icon: "fas fa-chess-pawn",
         onclick: () => {
+            // Note: If NpcArchitectApp hasn't been upgraded to V2 yet, render(true) stays.
             import("./NpcArchitectApp.js").then(m => new m.NpcArchitectApp(sheet.actor).render(true));
         }
     });
@@ -115,7 +122,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
         title: "Campaign Dossier",
         icon: "fas fa-users",
         visible: true,
-        onClick: () => { new NpcDossierApp().render(true); },
+        onClick: () => { new NpcDossierApp().render({ force: true }); },
         button: true
     };
 
@@ -135,4 +142,3 @@ Hooks.on("getSceneControlButtons", (controls) => {
         }
     }
 });
-

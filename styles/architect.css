@@ -1,17 +1,17 @@
-.npc-architect {
+.pf2e-npc-architect.npc-architect {
     background: url("../../../ui/parchment.jpg") repeat;
     color: #191813;
     font-family: "Signika", sans-serif;
 }
 
-.npc-architect .window-content {
+.pf2e-npc-architect.npc-architect .window-content {
     overflow-y: auto; 
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
-.architect-header {
+.pf2e-npc-architect .architect-header {
     background: rgba(0, 0, 0, 0.1);
     padding: 10px;
     border-bottom: 2px solid #4b4a44;
@@ -20,25 +20,25 @@
     gap: 10px;
 }
 
-.architect-header img {
+.pf2e-npc-architect .architect-header img {
     border: 2px solid #4b4a44;
     border-radius: 5px;
     background: #000;
 }
 
-.architect-header h1 {
+.pf2e-npc-architect .architect-header h1 {
     border: none;
     margin: 0;
     flex-grow: 1;
 }
 
-.architect-nav {
+.pf2e-npc-architect .architect-nav {
     display: flex;
     background: rgba(0, 0, 0, 0.05);
     border-bottom: 1px solid #7a7971;
 }
 
-.architect-nav a.item {
+.pf2e-npc-architect .architect-nav a.item {
     padding: 10px 20px;
     cursor: pointer;
     font-weight: bold;
@@ -46,53 +46,48 @@
     border-right: 1px solid #7a7971;
 }
 
-.architect-nav a.item:hover {
+.pf2e-npc-architect .architect-nav a.item:hover {
     background: rgba(0, 0, 0, 0.1);
     text-shadow: 0 0 5px white;
 }
 
-.architect-nav a.item.active {
+.pf2e-npc-architect .architect-nav a.item.active {
     background: rgba(0, 0, 0, 0.2);
     color: #000;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
 }
 
-
-.architect-body {
+.pf2e-npc-architect .architect-body {
     padding: 15px;
-
     flex-grow: 1;
     overflow-y: auto; 
 }
 
-
-.grid-2col {
+.pf2e-npc-architect .grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
 
-.stat-box {
+.pf2e-npc-architect .stat-box {
     background: rgba(255, 255, 255, 0.5);
     border: 1px solid #7a7971;
     padding: 10px;
     border-radius: 4px;
 }
 
-
-input[type="range"].affiliation-slider {
+.pf2e-npc-architect input[type="range"].affiliation-slider {
     width: 100%;
     accent-color: #4b4a44; 
 }
 
-.aff-badge.allied { color: #2e8b57; background: #e0f8e0; border: 1px solid #2e8b57; } 
-.aff-badge.friendly { color: #4682b4; background: #e6f2ff; border: 1px solid #4682b4; } 
-.aff-badge.neutral { color: #555; background: #eee; border: 1px solid #ccc; }
-.aff-badge.dislike { color: #d2691e; background: #ffe6cc; border: 1px solid #d2691e; } 
-.aff-badge.enemy { color: #8b0000; background: #ffcccc; border: 1px solid #8b0000; } 
+.pf2e-npc-architect .aff-badge.allied { color: #2e8b57; background: #e0f8e0; border: 1px solid #2e8b57; } 
+.pf2e-npc-architect .aff-badge.friendly { color: #4682b4; background: #e6f2ff; border: 1px solid #4682b4; } 
+.pf2e-npc-architect .aff-badge.neutral { color: #555; background: #eee; border: 1px solid #ccc; }
+.pf2e-npc-architect .aff-badge.dislike { color: #d2691e; background: #ffe6cc; border: 1px solid #d2691e; } 
+.pf2e-npc-architect .aff-badge.enemy { color: #8b0000; background: #ffcccc; border: 1px solid #8b0000; } 
 
-
-.aff-badge {
+.pf2e-npc-architect .aff-badge {
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 0.8em;
@@ -100,7 +95,7 @@ input[type="range"].affiliation-slider {
     text-transform: uppercase;
 }
 
-.public-sheet-form {
+.pf2e-npc-architect .public-sheet-form {
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -111,8 +106,7 @@ input[type="range"].affiliation-slider {
     box-sizing: border-box;
 }
 
-
-.sheet-layout {
+.pf2e-npc-architect .sheet-layout {
     flex: 1;
     display: flex;
     gap: 20px;
@@ -120,7 +114,7 @@ input[type="range"].affiliation-slider {
     height: 100%;
 }
 
-.sheet-sidebar {
+.pf2e-npc-architect .sheet-sidebar {
     flex: 0 0 240px; 
     display: flex;
     flex-direction: column;
@@ -130,16 +124,14 @@ input[type="range"].affiliation-slider {
     overflow-y: auto; 
 }
 
-
-.sheet-main {
+.pf2e-npc-architect .sheet-main {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden; 
 }
 
-
-.party-notes-wrapper {
+.pf2e-npc-architect .party-notes-wrapper {
     flex: 1; 
     display: flex;
     flex-direction: column;
@@ -147,8 +139,7 @@ input[type="range"].affiliation-slider {
     overflow: hidden; 
 }
 
-
-.notes-feed {
+.pf2e-npc-architect .notes-feed {
     flex: 1; 
     overflow-y: auto; 
     display: flex;
@@ -161,13 +152,13 @@ input[type="range"].affiliation-slider {
 }
 
 /* Deceased: Completely grayed out and slightly faded */
-.status-deceased {
+.pf2e-npc-architect .status-deceased {
     filter: grayscale(100%) contrast(1.1) !important;
     opacity: 0.6 !important;
 }
 
 /* Missing: Washed out or sepia toned to indicate uncertainty */
-.status-missing {
+.pf2e-npc-architect .status-missing {
     filter: sepia(60%) hue-rotate(180deg) !important;
     opacity: 0.8 !important;
 }

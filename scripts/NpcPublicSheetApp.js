@@ -1,43 +1,48 @@
-export class NpcPublicSheetApp extends FormApplication {
-    constructor(actor, options) {
-        super(actor, options);
-        this.actor = actor; 
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+export class NpcPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
+    
+    constructor(actor, options = {}) {
+        // Dynamically assign the ID before V2 locks the options object
+        options.id = `public-sheet-${actor.id}-${game.user.id}`;
+        
         const savedPos = game.user?.getFlag("pf2e-npc-architect", "publicSheetBounds");
         if (savedPos) {
-            this.position.width = savedPos.width;
-            this.position.height = savedPos.height;
-            this.position.left = savedPos.left;
-            this.position.top = savedPos.top;
+            options.position = foundry.utils.mergeObject(options.position || {}, savedPos);
         }
+        
+        super(options);
+        this.actor = actor; 
     }
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
+    static DEFAULT_OPTIONS = {
+        tag: "div",
+        window: {
             title: "NPC File",
-            template: "modules/pf2e-npc-architect/templates/public-sheet.hbs",
+            resizable: true,
+        },
+        position: {
             width: 700,
-            height: 650,
-            classes: ["npc-architect", "public-sheet"],
-            submitOnChange: true,
-            closeOnSubmit: false,
-            resizable: true
-        });
-    }
-    async close(options) {
-        await game.user.setFlag("pf2e-npc-architect", "publicSheetBounds", {
+            height: 650
+        },
+        // CSS Namespace locked in here
+        classes: ["pf2e-npc-architect", "npc-architect", "public-sheet"]
+    };
+
+    static PARTS = {
+        main: { template: "modules/pf2e-npc-architect/templates/public-sheet.hbs" }
+    };
+
+    _onClose(options) {
+        game.user.setFlag("pf2e-npc-architect", "publicSheetBounds", {
             width: this.position.width,
             height: this.position.height,
             left: this.position.left,
             top: this.position.top
         });
-        return super.close(options);
     }
 
-    get id() {
-        return `public-sheet-${this.actor.id}-${game.user.id}`;
-    }
-
-    getData() {
+    async _prepareContext(options) {
         const flags = this.actor.getFlag("pf2e-npc-architect", "data") || {};
         const isMystified = this.actor.getFlag("pf2e-npc-architect", "mystified") || false;
         
@@ -138,17 +143,21 @@ export class NpcPublicSheetApp extends FormApplication {
         };
     }
 
-    activateListeners(html) {
-        super.activateListeners(html);
+    _onRender(context, options) {
+        super._onRender(context, options);
+        const html = $(this.element);
+
+        // 1. Copy/Paste Fix for the main window textareas
+        html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
 
         html.find('.mystify-toggle').click(async (ev) => {
             ev.preventDefault();
             const currentStatus = this.actor.getFlag("pf2e-npc-architect", "mystified") || false;
             await this.actor.setFlag("pf2e-npc-architect", "mystified", !currentStatus);
-            this.render(false);
+            this.render({ force: true });
             
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
-            if (dossier) dossier.render(false);
+            if (dossier) dossier.render({ force: true });
         });
 
         html.find('.profile-img').click(ev => {
@@ -168,18 +177,19 @@ export class NpcPublicSheetApp extends FormApplication {
             }
         });
 
-
         const getNotesData = () => {
             const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
             if (!notesJournal) return null;
             let rawNotes = notesJournal.getFlag("pf2e-npc-architect", `notes_${this.actor.id}`) || [];
 
-if (typeof rawNotes === "string") {
-
-   if (rawNotes.trim() !== "") {
-       notesArray.push({ id: "legacy-note", userId: "legacy", text: rawNotes, time: Date.now() });
-   }
-}
+            // Fixed the legacy string-parsing bug
+            if (typeof rawNotes === "string") {
+                let notesArray = [];
+                if (rawNotes.trim() !== "") {
+                    notesArray.push({ id: "legacy-note", userId: "legacy", text: rawNotes, time: Date.now() });
+                }
+                rawNotes = notesArray;
+            }
             return { journal: notesJournal, notes: rawNotes };
         };
 
@@ -199,10 +209,11 @@ if (typeof rawNotes === "string") {
             });
 
             await data.journal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, data.notes);
-            this.render(false);
+            this.render({ force: true });
         };
 
         html.find('.post-note-btn').click(ev => { ev.preventDefault(); postNote(); });
+        
         html.find('.new-note-input').keydown(ev => {
             if (ev.key === "Enter" && !ev.shiftKey) {
                 ev.preventDefault();
@@ -217,9 +228,8 @@ if (typeof rawNotes === "string") {
 
             const newNotes = data.notes.filter(n => String(n.id || n.time) !== noteId);
             await data.journal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, newNotes);
-            this.render(false);
+            this.render({ force: true });
         });
-
 
         html.find('.edit-note-btn').click(async ev => {
             const noteId = String($(ev.currentTarget).data('id'));
@@ -243,13 +253,20 @@ if (typeof rawNotes === "string") {
                             if (newText) {
                                 data.notes[noteIndex].text = newText;
                                 await data.journal.setFlag("pf2e-npc-architect", `notes_${this.actor.id}`, data.notes);
-                                this.render(false);
+                                this.render({ force: true });
                             }
                         }
                     },
                     cancel: { icon: '<i class="fas fa-times"></i>', label: "Cancel" }
                 },
-                default: "save"
+                default: "save",
+                render: (dHtml) => {
+                    // 2. Copy/Paste Fix for the Dialog
+                    dHtml.find('input, textarea').on('contextmenu', e => e.stopPropagation());
+                }
+            }, {
+                // Scoped dialog class
+                classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"]
             }).render(true);
         });
     }

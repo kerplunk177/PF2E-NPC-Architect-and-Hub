@@ -1,33 +1,36 @@
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 import { updateNpcStats } from "./NpcDataModel.js";
 
-export class NpcArchitectApp extends FormApplication {
+export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
     
-    constructor(actor) {
-        super();
+    constructor(actor, options = {}) {
+        super(options);
         this.actor = actor;
         this._editingArchetype = null; 
     }
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            id: "pf2e-npc-architect-app",
+    static DEFAULT_OPTIONS = {
+        id: "pf2e-npc-architect-app",
+        tag: "div", 
+        window: {
             title: "NPC Architect",
-            template: "modules/pf2e-npc-architect/templates/hub-shell.hbs",
-            width: 800,
-            height: "auto",
             resizable: true,
-            classes: ["pf2e-npc-architect"],
-            submitOnChange: true,
-            closeOnSubmit: false,
-            tabs: [{ navSelector: ".architect-nav", contentSelector: ".architect-body", initial: "dossier" }]
-        });
-    }
+        },
+        position: {
+            width: 800,
+            height: "auto"
+        },
+        classes: ["pf2e-npc-architect"], // This is the magic CSS scoping tag
+    };
 
-    getData() {
-        const data = super.getData();
+    static PARTS = {
+        main: { template: "modules/pf2e-npc-architect/templates/hub-shell.hbs" }
+    };
+
+    async _prepareContext(options) {
+        const data = {};
         const flags = this.actor.getFlag("pf2e-npc-architect", "data") || {};
         
-        // Safely pack the status logic into the main data object
         data.currentStatus = flags.status || "Alive";
         data.statusOptions = {
             "Alive": "Alive",
@@ -102,16 +105,17 @@ export class NpcArchitectApp extends FormApplication {
 
         data.connections = flags.connections || [];
         
-        // The Magic Bullet Return Block
         return {
             actor: this.actor,
             data: data,
-            ...data // Copies everything inside 'data' to the root so Handlebars can never miss it
+            ...data 
         };
     }
 
     async _updateObject(event, formData) {
-        if (!event.target || !event.target.closest('#builder-editor')) {
+        const html = $(this.element);
+        
+        if (!event.target || !$(event.target).closest('#builder-editor').length) {
             formData.tracked = !!formData.tracked;
             formData.isLocation = !!formData.isLocation; 
             
@@ -123,11 +127,10 @@ export class NpcArchitectApp extends FormApplication {
             formData.faction = String(fac || "").trim();
             formData.affiliation = String(aff || "Neutral").trim();
             
-            // Force the status from the DOM into the save payload
-            formData.status = this.element.find('[name="status"]').val() || "Alive";
+            formData.status = html.find('[name="status"]').val() || "Alive";
 
             const connections = [];
-            this.element.find('.connection-row').each((i, row) => {
+            html.find('.connection-row').each((i, row) => {
                 const id = $(row).find('.conn-id').val();
                 const label = $(row).find('.conn-label').val().trim();
                 const isSecret = $(row).find('.conn-secret').is(':checked'); 
@@ -138,29 +141,41 @@ export class NpcArchitectApp extends FormApplication {
             });
             formData.connections = connections;
             
-            // Save the complete object
             await this.actor.setFlag("pf2e-npc-architect", "data", formData);
 
-            // V2 Target: Ping the Dossier in the correct instance registry
             const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
             if (dossier) dossier.render(false);
         }
     }
 
-    activateListeners(html) {
-        // Force the status dropdown to match the database on load
+    _onRender(context, options) {
+        super._onRender(context, options);
+        const html = $(this.element);
+
+        // 1. The Copy/Paste Fix
+        html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+
+        // 2. Rebuild Legacy Tabs for V2
+        const tabs = new Tabs({ navSelector: ".architect-nav", contentSelector: ".architect-body", initial: "dossier" });
+        tabs.bind(html[0]);
+
+        // 3. Rebuild submitOnChange logic
+        html.find('form').on('change', ev => {
+            if ($(ev.target).closest('#builder-editor').length) return; 
+            const formData = new FormDataExtended(ev.currentTarget).object;
+            this._updateObject(ev, formData);
+        });
+
         const currentData = this.actor.getFlag("pf2e-npc-architect", "data") || {};
         html.find('[name="status"]').val(currentData.status || "Alive");
-        super.activateListeners(html);
-       
-
+        
         html.find('.apply-scaling-btn').click(async (event) => {
             event.preventDefault(); 
-            const formElement = this.element.find("form")[0];
+            const formElement = html.find("form")[0];
             const formData = new FormDataExtended(formElement).object;
             await updateNpcStats(this.actor, parseInt(formData.targetLevel), formData.role);
             await this.actor.setFlag("pf2e-npc-architect", "data", { role: formData.role, targetLevel: parseInt(formData.targetLevel) });
-            this.render();
+            this.render(true);
         });
 
         const archetypeSelect = html.find('#archetype-select');
@@ -215,12 +230,13 @@ export class NpcArchitectApp extends FormApplication {
             
             html.find('.remove-connection-btn').off('click').click(e => {
                 $(e.currentTarget).closest('.connection-row').remove();
+                html.find("form").submit(); 
             });
         });
 
         html.find('.remove-connection-btn').click(e => {
             $(e.currentTarget).closest('.connection-row').remove();
-            this.element.find("form").submit();
+            html.find("form").submit();
         });
     }
 
@@ -255,7 +271,7 @@ export class NpcArchitectApp extends FormApplication {
     _renderBuilderUI() {
         if (!this._editingArchetype) return;
         
-        const html = this.element;
+        const html = $(this.element);
         const editor = html.find('#builder-editor');
         const container = html.find('.level-container');
         
@@ -313,7 +329,8 @@ export class NpcArchitectApp extends FormApplication {
         container.html(rows);
 
         editor.show();
-        this.setPosition({ height: "auto" });
+
+        if (this.setPosition) this.setPosition({ height: "auto" });
 
         container.find('.delete-item-btn').click((ev) => {
             const level = $(ev.currentTarget).closest('.level-row').data('level');
@@ -362,7 +379,7 @@ export class NpcArchitectApp extends FormApplication {
         await game.settings.set("pf2e-npc-architect", "customArchetypes", allArchetypes);
         
         ui.notifications.info(`Saved Archetype: ${this._editingArchetype.name}`);
-        this.render(); 
+        this.render(true); 
     }
 
     _removeItemFromLevel(level, uuid) {
