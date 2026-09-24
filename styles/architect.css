@@ -162,3 +162,19 @@
     filter: sepia(60%) hue-rotate(180deg) !important;
     opacity: 0.8 !important;
 }
+.pf2e-npc-architect input[type="text"], 
+.pf2e-npc-architect input[type="number"], 
+.pf2e-npc-architect select, 
+.pf2e-npc-architect .tile-input {
+    background: #f4f4f2 !important;
+    color: #111111 !important;
+    border: 1px solid #4b4a44;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.pf2e-npc-architect [data-darkreader-inline-bgcolor], 
+.pf2e-npc-architect [data-darkreader-inline-color] {
+    background-color: #f4f4f2 !important;
+    color: #111111 !important;
+}
