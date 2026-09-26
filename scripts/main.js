@@ -102,7 +102,7 @@ Hooks.once("ready", async () => {
 });
 
 Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
-    if (!game.user.isGM) return;
+    if (!sheet.actor.isOwner) return;
     if (sheet.actor.type !== "npc" && sheet.actor.type !== "loot") return;
 
     buttons.unshift({

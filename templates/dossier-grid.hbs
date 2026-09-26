@@ -1,142 +1,156 @@
-<div class="dossier-container {{#if isAnimated}}dossier-animated-bg{{/if}}">
-    
-    <div class="dossier-controls">
-    <div class="control-left">
-        <input type="text" class="dossier-search" placeholder="Search names or lore...">
-        <select class="dossier-sort">
-            <option value="name" {{#if (eq currentSort "name")}}selected{{/if}}>Sort by Name (A-Z)</option>
-            <option value="affiliation" {{#if (eq currentSort "affiliation")}}selected{{/if}}>Sort by Affiliation</option>
-        </select>
+<div class="dossier-master-wrapper" style="height: 100%; display: flex; flex-direction: column;">
+    <div class="dossier-container {{#if isAnimated}}dossier-animated-bg{{/if}}" style="flex: 1; overflow-y: auto;">
         
-        {{#if isGM}}
-        <select class="campaign-filter dossier-sort">
-            {{#each campaignOptions}}
-                <option value="{{this.name}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
-            {{/each}}
-        </select>
-        {{/if}}
-    </div>
-        
-    {{#if isGM}}
-    <div class="control-right">
-        <button class="manage-factions-btn">
-            <i class="fas fa-list-ol"></i> Manage Factions
-        </button>
-    </div>
-    {{/if}}
-</div>
-
-    {{#each factionList}}
-        <div class="faction-group">
-            <div class="faction-header">
-                <h2 class="faction-toggle" style="color: {{color}}; text-shadow: 1px 1px 2px black;">
-    <i class="fas fa-chevron-down"></i> {{name}}
-</h2>
-                <hr>
+        <div class="dossier-controls">
+            <div class="control-left">
+                <input type="text" class="dossier-search" placeholder="Search names or lore...">
+                <select class="dossier-sort">
+                    <option value="name" {{#if (eq currentSort "name")}}selected{{/if}}>Sort by Name (A-Z)</option>
+                    <option value="affiliation" {{#if (eq currentSort "affiliation")}}selected{{/if}}>Sort by Affiliation</option>
+                </select>
+                
+                {{#if isGM}}
+                <select class="campaign-filter dossier-sort">
+                    {{#each campaignOptions}}
+                        <option value="{{this.name}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
+                    {{/each}}
+                </select>
+                {{/if}}
             </div>
+                
+            <!-- Public: Anyone can add a Person of Interest -->
+            <div class="control-right" style="display: flex; gap: 10px;">
+                <button type="button" data-action="createPoi" class="manage-factions-btn" title="Add Person of Interest">
+                    <i class="fas fa-feather-alt"></i> Add POI
+                </button>
 
-            <div class="dossier-grid">
-                {{#each cards}}
-                <div class="dossier-card" data-id="{{id}}" data-status="{{status}}" draggable="true">
-                    <div class="card-image">
-                        <img src="{{img}}" class="{{statusClass}}" alt="{{name}}">
-                    </div>
-                    <div class="card-content">
-                        <h3 class="card-title">{{name}}</h3>
-                        <div class="card-meta">
-                            {{#unless isLocation}}
-                            <span class="aff-badge {{affClass}}">{{affiliation}}</span>
-                            {{/unless}}
-                        </div>
-                        <p class="card-blurb"><em>{{blurb}}</em></p>
-                    </div>
+                <!-- GM Only: Faction Management -->
+                {{#if isGM}}
+                <button type="button" data-action="manageFactions" class="manage-factions-btn">
+                    <i class="fas fa-list-ol"></i> Manage Factions
+                </button>
+                {{/if}}
+            </div>
+        </div>
+
+        {{#each factionList}}
+            <div class="faction-group">
+                <div class="faction-header">
+                    <h2 class="faction-toggle" style="color: {{color}}; text-shadow: 1px 1px 2px black;">
+                        <i class="fas fa-chevron-down"></i> {{name}}
+                    </h2>
+                    <hr>
                 </div>
-                {{/each}}
+
+                <div class="dossier-grid">
+                    {{#each cards}}
+                    <!-- Ephemeral Logic applied to the card wrapper -->
+                    <div class="dossier-card {{#if isEphemeral}}ephemeral{{/if}}" data-id="{{id}}" data-status="{{status}}" {{#unless isEphemeral}}draggable="true"{{/unless}}>
+                        <div class="card-image" style="position: relative;">
+                            <img src="{{img}}" class="{{statusClass}}" alt="{{name}}">
+                            <!-- The POI Badge -->
+                            {{#if isEphemeral}}
+                                <span class="poi-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #e0e0e0; font-size: 10px; padding: 2px 5px; border-radius: 3px; border: 1px solid #5a5954;">
+                                    <i class="fas fa-feather-alt"></i> POI
+                                </span>
+                            {{/if}}
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">{{name}}</h3>
+                            <div class="card-meta">
+                                {{#unless isLocation}}
+                                <span class="aff-badge {{affClass}}">{{affiliation}}</span>
+                                {{/unless}}
+                            </div>
+                            <p class="card-blurb"><em>{{blurb}}</em></p>
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
             </div>
-        </div>
-    {{else}}
-        <div class="empty-state">
-            <p>No NPCs tracked.</p> 
-            <p><small>Open an NPC sheet -> Architect -> Check "Track in Hub".</small></p>
-        </div>
-    {{/each}}
+        {{else}}
+            <div class="empty-state">
+                <p>No NPCs tracked.</p> 
+                <p><small>Open an NPC sheet -> Architect -> Check "Track in Hub".</small></p>
+            </div>
+        {{/each}}
+    </div>
+
+    <style>
+        /* App Container */
+        .pf2e-npc-architect.dossier-container { padding: 20px; background: #1c1b1a; position: relative; display: flex; flex-direction: column; height: 100%; overflow-x: hidden; }
+
+        @keyframes rollingFog { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .pf2e-npc-architect.dossier-container.dossier-animated-bg { background: linear-gradient(110deg, #080808, #1c1b1a, #050505, #1a1918, #0a0a0a) !important; background-size: 400% 400% !important; animation: rollingFog 30s ease-in-out infinite !important; }
+
+        /* Top Controls */
+        .pf2e-npc-architect .dossier-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #5a5954; flex: 0 0 auto; }
+        .pf2e-npc-architect .control-left { display: flex; gap: 10px; flex: 1; align-items: center; }
+
+        .pf2e-npc-architect .dossier-search, 
+        .pf2e-npc-architect .dossier-sort, 
+        .pf2e-npc-architect .manage-factions-btn {
+            color: #111 !important;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid #4b4a44;
+            padding: 6px 12px;
+            border-radius: 3px;
+            height: 32px;
+            font-family: inherit;
+        }
+
+        .pf2e-npc-architect .dossier-search { flex: 1; min-width: 200px; max-width: 400px; }
+        .pf2e-npc-architect .dossier-sort { width: auto !important; flex: 0 0 auto; }
+        
+        .pf2e-npc-architect .manage-factions-btn { cursor: pointer; transition: background 0.2s ease; }
+        .pf2e-npc-architect .manage-factions-btn:hover { background: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.5); }
+
+        /* Grid & Factions */
+        .pf2e-npc-architect .faction-group { margin-bottom: 30px; flex: 0 0 auto; }
+        .pf2e-npc-architect .faction-header { width: 100%; margin-bottom: 15px; }
+        
+        .pf2e-npc-architect .faction-toggle { border: none; margin: 0; font-family: "Modesto Condensed", "Palatino Linotype", serif; font-size: 1.8em; color: #e0e0e0; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; user-select: none; }
+        .pf2e-npc-architect .faction-toggle:hover { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+        .pf2e-npc-architect .faction-toggle i { font-size: 0.7em; vertical-align: middle; margin-right: 5px; color: #888; }
+        
+        .pf2e-npc-architect .faction-header hr { border: 0; height: 2px; background: #5a5954; margin-top: 5px; }
+        
+        .pf2e-npc-architect .dossier-grid { display: flex; flex-wrap: wrap; gap: 15px; }
+        .pf2e-npc-architect .hidden-by-search { display: none !important; }
+
+        /* Cards */
+        .pf2e-npc-architect .dossier-card { flex: 0 0 220px; width: 220px; height: 380px; background: rgba(255,255,255,0.95); border: 1px solid #7a7971; border-radius: 4px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; overflow: hidden; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
+        .pf2e-npc-architect .dossier-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.6); border-color: #a8a69d; }
+        
+        /* The Ephemeral Card Styling */
+        .pf2e-npc-architect .dossier-card.ephemeral { border: 1px dashed #7a7971 !important; background: rgba(0,0,0,0.4); }
+
+        .pf2e-npc-architect .card-image { height: 220px; background: #111; border-bottom: 2px solid #4b4a44; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .pf2e-npc-architect .card-image img { width: 100%; height: 100%; object-fit: contain; border: none; }
+        
+        .pf2e-npc-architect .card-content { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
+        .pf2e-npc-architect .card-title { margin: 0 0 8px 0; font-size: 1.1em; font-weight: bold; border-bottom: 1px solid #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; color: #111; }
+        .pf2e-npc-architect .card-meta { display: block; width: 100%; margin-bottom: 10px; }
+        
+        /* Badges */
+        .pf2e-npc-architect .aff-badge.allied { color: #2e8b57; background: #e0f8e0; border: 1px solid #2e8b57; }
+        .pf2e-npc-architect .aff-badge.friendly { color: #4682b4; background: #e6f2ff; border: 1px solid #4682b4; }
+        .pf2e-npc-architect .aff-badge.neutral { color: #555; background: #eee; border: 1px solid #ccc; }
+        .pf2e-npc-architect .aff-badge.dislike { color: #d2691e; background: #ffe6cc; border: 1px solid #d2691e; }
+        .pf2e-npc-architect .aff-badge.enemy { color: #8b0000; background: #ffcccc; border: 1px solid #8b0000; }
+        .pf2e-npc-architect .aff-badge.unknown { color: #555; background: #dbdbdb; border: 1px dashed #777; }
+        .pf2e-npc-architect .aff-badge { display: block; width: 100%; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 0.75em; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .pf2e-npc-architect .card-blurb { font-size: 0.85em; color: #333; margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; line-height: 1.3em; text-align: center; font-style: italic; }
+        
+        .pf2e-npc-architect .empty-state { width: 100%; text-align: center; margin-top: 50px; color: #aaa; }
+        
+        .pf2e-npc-architect .status-deceased { filter: grayscale(100%) contrast(1.1) !important; opacity: 0.6 !important; }
+        .pf2e-npc-architect .status-missing { filter: sepia(60%) hue-rotate(180deg) !important; opacity: 0.8 !important; }
+
+        /* Dialog Exclusions */
+        .dossier-dark-dialog.window-app .window-content { background: #1c1b1a !important; background-image: none !important; color: #e0e0e0; border: 1px solid #4b4a44; }
+        .dossier-dark-dialog .dialog-buttons button { background: rgba(255,255,255,0.1) !important; color: #e0e0e0 !important; border: 1px solid #5a5954 !important; text-shadow: none !important; transition: all 0.2s ease; cursor: pointer; }
+        .dossier-dark-dialog .dialog-buttons button:hover { background: rgba(255,255,255,0.2) !important; color: #fff !important; box-shadow: 0 0 5px rgba(255,255,255,0.2) !important; }
+    </style>
 </div>
-
-<style>
-    /* V2 Part Flex Fixes - These do not need namespacing */
-    [data-application-part="controls"] { flex: 0 0 auto; }
-    [data-application-part="grid"] { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-
-    /* App Container */
-    .pf2e-npc-architect.dossier-container { padding: 20px; background: #1c1b1a; position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-
-    @keyframes rollingFog { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-    .pf2e-npc-architect.dossier-container.dossier-animated-bg { background: linear-gradient(110deg, #080808, #1c1b1a, #050505, #1a1918, #0a0a0a) !important; background-size: 400% 400% !important; animation: rollingFog 30s ease-in-out infinite !important; }
-
-    /* Top Controls */
-    .pf2e-npc-architect .dossier-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #5a5954; }
-    .pf2e-npc-architect .control-left { display: flex; gap: 10px; flex: 1; align-items: center; }
-
-    .pf2e-npc-architect .dossier-search, 
-    .pf2e-npc-architect .dossier-sort, 
-    .pf2e-npc-architect .manage-factions-btn {
-        color: #111 !important;
-        background: rgba(255,255,255,0.9);
-        border: 1px solid #4b4a44;
-        padding: 6px 12px;
-        border-radius: 3px;
-        height: 32px;
-        font-family: inherit;
-    }
-
-    .pf2e-npc-architect .dossier-search { flex: 1; min-width: 200px; max-width: 400px; }
-    .pf2e-npc-architect .dossier-sort { width: auto !important; flex: 0 0 auto; }
-    
-    .pf2e-npc-architect .manage-factions-btn { cursor: pointer; transition: background 0.2s ease; }
-    .pf2e-npc-architect .manage-factions-btn:hover { background: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.5); }
-
-    /* Grid & Factions */
-    .pf2e-npc-architect .faction-group { margin-bottom: 30px; }
-    .pf2e-npc-architect .faction-header { width: 100%; margin-bottom: 15px; }
-    
-    .pf2e-npc-architect .faction-toggle { border: none; margin: 0; font-family: "Modesto Condensed", "Palatino Linotype", serif; font-size: 1.8em; color: #e0e0e0; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; user-select: none; }
-    .pf2e-npc-architect .faction-toggle:hover { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
-    .pf2e-npc-architect .faction-toggle i { font-size: 0.7em; vertical-align: middle; margin-right: 5px; color: #888; }
-    
-    .pf2e-npc-architect .faction-header hr { border: 0; height: 2px; background: #5a5954; margin-top: 5px; }
-    
-    .pf2e-npc-architect .dossier-grid { display: flex; flex-wrap: wrap; gap: 15px; }
-    .pf2e-npc-architect .hidden-by-search { display: none !important; }
-
-    /* Cards */
-    .pf2e-npc-architect .dossier-card { flex: 0 0 220px; width: 220px; height: 380px; background: rgba(255,255,255,0.95); border: 1px solid #7a7971; border-radius: 4px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; overflow: hidden; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
-    .pf2e-npc-architect .dossier-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.6); border-color: #a8a69d; }
-    
-    .pf2e-npc-architect .card-image { height: 220px; background: #111; border-bottom: 2px solid #4b4a44; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .pf2e-npc-architect .card-image img { width: 100%; height: 100%; object-fit: contain; border: none; }
-    
-    .pf2e-npc-architect .card-content { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
-    .pf2e-npc-architect .card-title { margin: 0 0 8px 0; font-size: 1.1em; font-weight: bold; border-bottom: 1px solid #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; color: #111; }
-    .pf2e-npc-architect .card-meta { display: block; width: 100%; margin-bottom: 10px; }
-    
-    /* Badges */
-    .pf2e-npc-architect .aff-badge.allied { color: #2e8b57; background: #e0f8e0; border: 1px solid #2e8b57; }
-    .pf2e-npc-architect .aff-badge.friendly { color: #4682b4; background: #e6f2ff; border: 1px solid #4682b4; }
-    .pf2e-npc-architect .aff-badge.neutral { color: #555; background: #eee; border: 1px solid #ccc; }
-    .pf2e-npc-architect .aff-badge.dislike { color: #d2691e; background: #ffe6cc; border: 1px solid #d2691e; }
-    .pf2e-npc-architect .aff-badge.enemy { color: #8b0000; background: #ffcccc; border: 1px solid #8b0000; }
-    .pf2e-npc-architect .aff-badge.unknown { color: #555; background: #dbdbdb; border: 1px dashed #777; }
-    .pf2e-npc-architect .aff-badge { display: block; width: 100%; text-align: center; padding: 4px 0; border-radius: 4px; font-size: 0.75em; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-    
-    .pf2e-npc-architect .card-blurb { font-size: 0.85em; color: #333; margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; line-height: 1.3em; text-align: center; font-style: italic; }
-    
-    .pf2e-npc-architect .empty-state { width: 100%; text-align: center; margin-top: 50px; color: #aaa; }
-    
-    .pf2e-npc-architect .status-deceased { filter: grayscale(100%) contrast(1.1) !important; opacity: 0.6 !important; }
-    .pf2e-npc-architect .status-missing { filter: sepia(60%) hue-rotate(180deg) !important; opacity: 0.8 !important; }
-
-    /* Dialog Exclusions */
-    .dossier-dark-dialog.window-app .window-content { background: #1c1b1a !important; background-image: none !important; color: #e0e0e0; border: 1px solid #4b4a44; }
-    .dossier-dark-dialog .dialog-buttons button { background: rgba(255,255,255,0.1) !important; color: #e0e0e0 !important; border: 1px solid #5a5954 !important; text-shadow: none !important; transition: all 0.2s ease; cursor: pointer; }
-    .dossier-dark-dialog .dialog-buttons button:hover { background: rgba(255,255,255,0.2) !important; color: #fff !important; box-shadow: 0 0 5px rgba(255,255,255,0.2) !important; }
-</style>
