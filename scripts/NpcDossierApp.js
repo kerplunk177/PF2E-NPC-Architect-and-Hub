@@ -75,7 +75,7 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             bioPublic: this.poi.bioPublic || "",
             partyNotesList: formattedNotes.reverse(), 
             connections: [], // Ephemerals don't have actor links yet
-            isLocation: false,
+            isLocation: this.poi.isLocation || false,
         };
     }
 
@@ -293,8 +293,12 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     static async #createPoiDialog(event, target) {
         const content = `
             <form autocomplete="off">
-                <p style="color:#e0e0e0;">Create a narrative Person of Interest without generating a full Actor sheet.</p>
+                <p style="color:#e0e0e0;">Create a narrative entry without generating a full Actor sheet.</p>
                 <div class="form-group"><label style="color:#e0e0e0;">Name</label><input type="text" id="poi-name" style="background: rgba(255,255,255,0.9); color: #111;" autofocus></div>
+                <div class="form-group">
+                    <label style="color:#e0e0e0;">Is this a Location?</label>
+                    <input type="checkbox" id="poi-is-location">
+                </div>
                 <div class="form-group"><label style="color:#e0e0e0;">Faction</label><input type="text" id="poi-faction" value="Unaligned" style="background: rgba(255,255,255,0.9); color: #111;"></div>
                 <div class="form-group"><label style="color:#e0e0e0;">Affiliation</label>
                     <select id="poi-affiliation" style="background: rgba(255,255,255,0.9); color: #111;">
@@ -312,14 +316,17 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     label: "Create File",
                     icon: '<i class="fas fa-feather-alt"></i>',
                     callback: async (html) => {
+                        const isLoc = html.find('#poi-is-location').is(':checked');
                         const newPoi = {
                             id: foundry.utils.randomID(),
+                            ownerId: game.user.id,
                             name: html.find('#poi-name').val() || "Unknown",
-                            img: "icons/svg/mystery-man.svg",
+                            img: isLoc ? "icons/svg/tower.svg" : "icons/svg/mystery-man.svg",
                             faction: html.find('#poi-faction').val(),
                             affiliation: html.find('#poi-affiliation').val(),
                             bioPublic: "",
-                            campaign: game.settings.get("pf2e-npc-architect", "activeCampaign") || "Global"
+                            campaign: game.settings.get("pf2e-npc-architect", "activeCampaign") || "Global",
+                            isLocation: isLoc
                         };
                         const journal = game.journal.getName("NPC Dossier Shared Notes");
                         if (journal) {
@@ -352,6 +359,10 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 <div class="form-group">
                     <label style="color:#e0e0e0;">Name</label>
                     <input type="text" id="edit-poi-name" value="${poi.name}" style="background: rgba(255,255,255,0.9); color: #111;">
+                </div>
+                <div class="form-group">
+                    <label style="color:#e0e0e0;">Is this a Location?</label>
+                    <input type="checkbox" id="edit-poi-is-location" ${poi.isLocation ? "checked" : ""}>
                 </div>
                 <div class="form-group">
                     <label style="color:#e0e0e0;">Portrait Image</label>
@@ -392,6 +403,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                         ephemerals[poiIndex] = {
                             ...poi,
                             name: html.find('#edit-poi-name').val() || "Unknown",
+                            isLocation: html.find('#edit-poi-is-location').is(':checked'),
                             img: html.find('#edit-poi-img').val() || "icons/svg/mystery-man.svg",
                             faction: html.find('#edit-poi-faction').val(),
                             affiliation: html.find('#edit-poi-affiliation').val(),
@@ -551,17 +563,17 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             return {
                 id: poi.id,
                 name: poi.name,
-                img: poi.img || "icons/svg/mystery-man.svg",
+                img: poi.img || (isLoc ? "icons/svg/tower.svg" : "icons/svg/mystery-man.svg"),
                 status: "Alive",
                 statusClass: "",
-                role: "Person of Interest",
+                role: isLoc ? "Location" : "Person of Interest",
                 campaignOptions: campaignOptions,
                 activeCampaign: poi.campaign || "Global",
-                isLocation: false,
-                faction: poi.faction || "Unaligned",
+                isLocation: isLoc,
+                faction: isLoc ? "Locations" : (poi.faction || "Unaligned"),
                 affiliation: affLabel,
                 affClass: affClass,
-                blurb: poi.bioPublic || "No public details.",
+                blurb: poi.bioPublic || (isLoc ? "No location details." : "No public details."),
                 connections: [],
                 isEphemeral: true
             };

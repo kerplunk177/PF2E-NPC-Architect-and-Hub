@@ -102,16 +102,33 @@ Hooks.once("ready", async () => {
 });
 
 Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
-    if (!sheet.actor.isOwner) return;
-    if (sheet.actor.type !== "npc" && sheet.actor.type !== "loot") return;
+    if (!sheet.actor?.isOwner) return;
+    
+    if (!["npc", "loot", "character"].includes(sheet.actor.type)) return;
 
     buttons.unshift({
         label: "", 
         class: "pf2e-npc-architect-btn",
         icon: "fas fa-chess-pawn",
         onclick: () => {
-            // Note: If NpcArchitectApp hasn't been upgraded to V2 yet, render(true) stays.
             import("./NpcArchitectApp.js").then(m => new m.NpcArchitectApp(sheet.actor).render(true));
+        }
+    });
+});
+
+Hooks.on('getApplicationHeaderButtons', (app, buttons) => {
+    const actor = app.document;
+    if (!actor || actor.documentName !== "Actor") return;
+    if (!actor.isOwner) return;
+    
+    if (!["npc", "loot", "character"].includes(actor.type)) return;
+
+    buttons.unshift({
+        label: "", 
+        class: "pf2e-npc-architect-btn",
+        icon: "fas fa-chess-pawn",
+        onClick: () => {
+            import("./NpcArchitectApp.js").then(m => new m.NpcArchitectApp(actor).render(true));
         }
     });
 });
