@@ -554,7 +554,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             let affClass = "neutral";
             const validAffs = ["Allied", "Friendly", "Neutral", "Dislike", "Enemy", "Unknown"];
             let rawAff = String(poi.affiliation || "").trim();
-            
+            const isLoc = poi.isLocation || false;
             if (validAffs.includes(rawAff)) {
                 affLabel = rawAff === "Unknown" ? "???" : rawAff;
                 affClass = rawAff.toLowerCase();
