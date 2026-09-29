@@ -159,12 +159,19 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const tabs = new Tabs({ navSelector: ".architect-nav", contentSelector: ".architect-body", initial: "dossier" });
         tabs.bind(html[0]);
 
-        // 3. Rebuild submitOnChange logic
-        html.find('form').on('change', ev => {
-            if ($(ev.target).closest('#builder-editor').length) return; 
-            const formData = new FormDataExtended(ev.currentTarget).object;
-            this._updateObject(ev, formData);
-        });
+       // 3. Rebuild submitOnChange logic AND Block Native Submits
+       html.find('form').on('change', ev => {
+        if ($(ev.target).closest('#builder-editor').length) return; 
+        const formData = new FormDataExtended(ev.currentTarget).object;
+        this._updateObject(ev, formData);
+    });
+
+    html.find('form').on('submit', ev => {
+        ev.preventDefault(); 
+        if ($(ev.target).closest('#builder-editor').length) return;
+        const formData = new FormDataExtended(ev.currentTarget).object;
+        this._updateObject(ev, formData);
+    });
 
         const currentData = this.actor.getFlag("pf2e-npc-architect", "data") || {};
         html.find('[name="status"]').val(currentData.status || "Alive");
@@ -230,13 +237,13 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
             
             html.find('.remove-connection-btn').off('click').click(e => {
                 $(e.currentTarget).closest('.connection-row').remove();
-                html.find("form").submit(); 
+                html.find("form").trigger("change"); 
             });
         });
 
-        html.find('.remove-connection-btn').click(e => {
+        html.find('.remove-connection-btn').off('click').click(e => {
             $(e.currentTarget).closest('.connection-row').remove();
-            html.find("form").submit();
+            html.find("form").trigger("change"); 
         });
     }
 

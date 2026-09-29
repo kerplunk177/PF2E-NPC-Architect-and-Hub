@@ -18,14 +18,17 @@
                 {{/if}}
             </div>
                 
-            <!-- Public: Anyone can add a Person of Interest -->
             <div class="control-right" style="display: flex; gap: 10px;">
                 <button type="button" data-action="createPoi" class="manage-factions-btn" title="Add Person of Interest">
                     <i class="fas fa-feather-alt"></i> Add POI
                 </button>
 
-                <!-- GM Only: Faction Management -->
+                <!-- GM Only Controls -->
                 {{#if isGM}}
+                <button type="button" class="preview-toggle manage-factions-btn" title="Toggle Player View">
+                    <i class="fas {{#if previewAsPlayer}}fa-user-tie{{else}}fa-users{{/if}}"></i> 
+                    {{#if previewAsPlayer}}Return to GM View{{else}}Preview Player View{{/if}}
+                </button>
                 <button type="button" data-action="manageFactions" class="manage-factions-btn">
                     <i class="fas fa-list-ol"></i> Manage Factions
                 </button>
@@ -44,11 +47,17 @@
 
                 <div class="dossier-grid">
                     {{#each cards}}
-                    <!-- Ephemeral Logic applied to the card wrapper -->
                     <div class="dossier-card {{#if isEphemeral}}ephemeral{{/if}}" data-id="{{id}}" data-status="{{status}}" {{#unless isEphemeral}}draggable="true"{{/unless}}>
                         <div class="card-image" style="position: relative;">
+                            
+                            {{#if mystifyBannerText}}
+                            <div class="gm-mystify-banner {{mystifyBannerClass}}">
+                                {{mystifyBannerText}}
+                            </div>
+                            {{/if}}
+
                             <img src="{{img}}" class="{{statusClass}}" alt="{{name}}">
-                            <!-- The POI Badge -->
+                            
                             {{#if isEphemeral}}
                                 <span class="poi-badge" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #e0e0e0; font-size: 10px; padding: 2px 5px; border-radius: 3px; border: 1px solid #5a5954;">
                                     <i class="fas fa-feather-alt"></i> POI
@@ -154,5 +163,31 @@
         .dossier-dark-dialog.window-app .window-content { background: #1c1b1a !important; background-image: none !important; color: #e0e0e0; border: 1px solid #4b4a44; }
         .dossier-dark-dialog .dialog-buttons button { background: rgba(255,255,255,0.1) !important; color: #e0e0e0 !important; border: 1px solid #5a5954 !important; text-shadow: none !important; transition: all 0.2s ease; cursor: pointer; }
         .dossier-dark-dialog .dialog-buttons button:hover { background: rgba(255,255,255,0.2) !important; color: #fff !important; box-shadow: 0 0 5px rgba(255,255,255,0.2) !important; }
+        .pf2e-npc-architect .gm-mystify-banner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 4px 0;
+            text-align: center;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+            pointer-events: none; 
+        }
+        
+        .pf2e-npc-architect .banner-full {
+            background: rgba(170, 68, 68, 0.85); 
+            border-bottom: 2px solid #ff6666;
+        }
+
+        .pf2e-npc-architect .banner-partial {
+            background: rgba(200, 120, 0, 0.85); 
+            border-bottom: 2px solid #ffaa00;
+        }
     </style>
 </div>

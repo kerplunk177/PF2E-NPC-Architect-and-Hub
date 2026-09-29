@@ -78,7 +78,7 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             isLocation: this.poi.isLocation || false,
         };
     }
-
+    
     _onRender(context, options) {
         super._onRender(context, options);
         const html = $(this.element);
@@ -186,6 +186,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
         super(options);
         this.currentSort = "affiliation";
+        this.previewAsPlayer = false; 
     }
 
     static DEFAULT_OPTIONS = {
@@ -210,8 +211,28 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     static PARTS = {
         main: { template: "modules/pf2e-npc-architect/templates/dossier-grid.hbs" }
     };
+    _onFirstRender(context, options) {
+        super._onFirstRender(context, options);
 
+        this._liveHooks = {
+            actor: Hooks.on("updateActor", (actor, changes) => {
+                const isTracked = actor.getFlag("pf2e-npc-architect", "data")?.tracked;
+                const changedFlags = foundry.utils.hasProperty(changes, "flags.pf2e-npc-architect");
+                if (isTracked || changedFlags) this.render({ force: true });
+            }),
+            journal: Hooks.on("updateJournalEntry", (journal, changes) => {
+                if (journal.name === "NPC Dossier Shared Notes") {
+                    this.render({ force: true });
+                }
+            })
+        };
+    }
     _onClose(options) {
+        if (this._liveHooks) {
+            Hooks.off("updateActor", this._liveHooks.actor);
+            Hooks.off("updateJournalEntry", this._liveHooks.journal);
+        }
+
         game.user.setFlag("pf2e-npc-architect", "dossierBounds", {
             width: this.position.width,
             height: this.position.height,
@@ -476,8 +497,25 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const cards = trackedActors.map(actor => {
             const flags = actor.getFlag("pf2e-npc-architect", "data") || {};
             const isMystified = actor.getFlag("pf2e-npc-architect", "mystified") || false;
+            const opts = actor.getFlag("pf2e-npc-architect", "mystifyOptions") || {};
+    
+            let mystifyBannerText = null;
+            let mystifyBannerClass = "";
+            if (game.user.isGM && isMystified) {
+                const anyRevealed = opts.revealName || opts.revealPic || opts.revealFaction || opts.revealAff || opts.revealBio || opts.revealConn;
+                mystifyBannerText = anyRevealed ? "Partially Hidden" : "Fully Hidden";
+                mystifyBannerClass = anyRevealed ? "banner-partial" : "banner-full";
+            }
             const isLocation = flags.isLocation || false;
             
+            const enforceMystify = isMystified && (!game.user.isGM || this.previewAsPlayer);
+            
+            const hideName = enforceMystify && !opts.revealName;
+            const hidePic = enforceMystify && !opts.revealPic;
+            const hideFaction = enforceMystify && !opts.revealFaction;
+            const hideAff = enforceMystify && !opts.revealAff;
+            const hideBio = enforceMystify && !opts.revealBio;
+
             let rawAff = flags.affiliation;
             if (Array.isArray(rawAff)) rawAff = rawAff[0];
             rawAff = String(rawAff || "").trim();
@@ -497,24 +535,32 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 else if (num <= -30) { affLabel = "Dislike"; affClass = "dislike"; }
             }
 
+            if (hideAff) {
+                affLabel = "???";
+                affClass = "unknown";
+            }
+
             const rawConnections = flags.connections || [];
-            const processedConnections = rawConnections.map(c => {
-                if (c.secret && !game.user.isGM) return null;
-                const connActor = game.actors.get(c.id);
-                if (!connActor) return null;
-                const connMystified = connActor.getFlag("pf2e-npc-architect", "mystified") || false;
-                const realName = connActor.name;
-                let displayImg = connActor.img;
-                if (!game.user.isGM && connMystified) {
-                    displayImg = "icons/svg/mystery-man.svg";
-                }
-                return {
-                    id: c.id, label: c.label, name: realName, img: displayImg, isSecret: c.secret
-                };
-            }).filter(c => c !== null);
+            let processedConnections = [];
+            if (!(enforceMystify && !opts.revealConn)) {
+                processedConnections = rawConnections.map(c => {
+                    if (c.secret && (!game.user.isGM || this.previewAsPlayer)) return null;
+                    const connActor = game.actors.get(c.id);
+                    if (!connActor) return null;
+                    const connMystified = connActor.getFlag("pf2e-npc-architect", "mystified") || false;
+                    const connOpts = connActor.getFlag("pf2e-npc-architect", "mystifyOptions") || {};
+                    
+                    const enforceConnMystify = connMystified && !game.user.isGM;
+                    
+                    const realName = (enforceConnMystify && !connOpts.revealName) ? "Unknown Entity" : connActor.name;
+                    let displayImg = (enforceConnMystify && !connOpts.revealPic) ? "icons/svg/mystery-man.svg" : connActor.img;
+                    
+                    return { id: c.id, label: c.label, name: realName, img: displayImg, isSecret: c.secret };
+                }).filter(c => c !== null);
+            }
 
             const status = flags.status || "Alive";
-            let displayName = actor.name;
+            let displayName = hideName ? "Unknown Entity" : actor.name;
             let statusClass = ""; 
 
             if (status === "Deceased") {
@@ -525,21 +571,27 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 statusClass = "status-missing";
             }
 
+            let finalFaction = flags.faction || "Unaligned";
+            if (hideFaction) finalFaction = "Unknown";
+            else if (isLocation) finalFaction = "Locations";
+
             return {
                 id: actor.id,
                 name: displayName,
-                img: isMystified ? "icons/svg/mystery-man.svg" : actor.img,
+                img: hidePic ? "icons/svg/mystery-man.svg" : actor.img,
                 status: status, 
                 statusClass: statusClass,
                 role: flags.role || "Unknown",
                 campaignOptions: campaignOptions,
                 activeCampaign: currentCampaign,
                 isLocation: isLocation, 
-                faction: isLocation ? "Locations" : (flags.faction || "Unaligned"), 
+                faction: finalFaction, 
                 affiliation: affLabel,
                 affClass: affClass, 
-                blurb: flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details."),
-                connections: processedConnections 
+                blurb: hideBio ? "Records redacted." : (flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details.")),
+                connections: processedConnections,
+                mystifyBannerText: mystifyBannerText,
+                mystifyBannerClass: mystifyBannerClass
             };
         });
 
@@ -591,7 +643,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             if (safeFaction === "") safeFaction = "Unaligned";
 
             const isHidden = safeFaction.toLowerCase() === "hidden";
-            if (isHidden && !game.user.isGM) return acc;
+            if (isHidden && (!game.user.isGM || this.previewAsPlayer)) return acc;
 
             const key = isHidden ? "Hidden" : safeFaction;
             if (!acc[key]) acc[key] = [];
@@ -637,6 +689,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             campaignOptions: campaignOptions,
             activeCampaign: currentCampaign,
             isGM: game.user.isGM,
+            previewAsPlayer: this.previewAsPlayer, 
             currentSort: this.currentSort,
             isAnimated: isAnimated 
         };
@@ -659,7 +712,15 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
         const html = $(this.element);
 
+        html.find('.preview-toggle').click(ev => {
+            ev.preventDefault();
+            this.previewAsPlayer = !this.previewAsPlayer;
+            this.render({ force: true });
+        });
+
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+        
+    
 
         html.find('.card-image').click(ev => {
             ev.stopPropagation(); 

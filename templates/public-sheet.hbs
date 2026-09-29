@@ -8,9 +8,12 @@
             </div>
             
             {{#if isGM}}
-            <button type="button" class="mystify-toggle" style="margin-bottom: 15px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
-                <i class="fas {{#if isMystified}}fa-eye{{else}}fa-user-secret{{/if}}"></i> 
-                {{#if isMystified}}Reveal Identity{{else}}Mystify NPC{{/if}}
+            <button type="button" class="mystify-toggle" style="margin-bottom: 8px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
+                <i class="fas fa-cog"></i> Mystification Settings
+            </button>
+            <button type="button" class="preview-toggle" style="margin-bottom: 15px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
+                <i class="fas {{#if previewAsPlayer}}fa-user-tie{{else}}fa-users{{/if}}"></i> 
+                {{#if previewAsPlayer}}Return to GM View{{else}}Preview Player View{{/if}}
             </button>
             {{/if}}
             
