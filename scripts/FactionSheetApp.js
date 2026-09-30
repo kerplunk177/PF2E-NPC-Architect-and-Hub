@@ -221,7 +221,15 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
                             if (dossier) dossier.render(false);
                         }
                     }
-                }, default: "save"
+                }, 
+                default: "save",
+                // THE MISSING LINK: Forces the Dialog UI to render in Dark Mode
+                render: (dHtml) => {
+                    const win = dHtml.closest('.window-content');
+                    win.css({ background: '#1c1b1a', color: '#e0e0e0', border: '1px solid #4b4a44' });
+                    win.find('.dialog-buttons').css({ margin: '0', padding: '10px 0 0 0', borderTop: '1px solid #444' });
+                    win.find('.dialog-button').css({ background: 'rgba(255,255,255,0.1)', border: '1px solid #5a5954', color: '#e0e0e0', margin: '0 5px' });
+                }
             }, { classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"], width: 400 }).render(true);
         });
 

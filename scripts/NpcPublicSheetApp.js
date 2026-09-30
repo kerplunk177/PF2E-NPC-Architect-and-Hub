@@ -157,7 +157,24 @@ export class NpcPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
         // 1. Copy/Paste Fix for the main window textareas
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
 
-        // The new Preview Toggle
+        html.on('click', '.npc-faction-link', async (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            
+            const factionName = $(ev.currentTarget).data('name');
+            
+            if (!factionName || factionName === "Unaligned" || factionName === "Locations" || factionName === "Unknown") return;
+            
+            const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+            const faction = factionDB.find(f => f.name === factionName);
+            
+            if (faction) {
+                const module = await import("./FactionSheetApp.js");
+                new module.FactionSheetApp(faction.id).render(true);
+            } else {
+                ui.notifications.warn(`NPC Architect: No detailed records exist for "${factionName}".`);
+            }
+        });
         html.find('.preview-toggle').click(ev => {
             ev.preventDefault();
             this.previewAsPlayer = !this.previewAsPlayer;

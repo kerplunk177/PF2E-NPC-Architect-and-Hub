@@ -21,9 +21,13 @@
                 {{actor.name}}
             </h1>
             
-            {{#unless isLocation}}
-            <div class="faction-tag" style="font-size: 1.1em; font-weight: bold; color: #aaa; margin-bottom: 15px; text-align: center;">{{faction}}</div>
+            <div class="faction-tag" style="font-size: 1.1em; font-weight: bold; color: #aaa; margin-bottom: 15px; text-align: center;">
+                <span class="npc-faction-link" data-name="{{faction}}" style="cursor: pointer; transition: all 0.2s ease; border-bottom: 1px dashed #666; padding-bottom: 2px;" onmouseover="this.style.color='#fff'; this.style.textShadow='0 0 8px rgba(255,255,255,0.4)';" onmouseout="this.style.color=''; this.style.textShadow='none';" title="View Faction Profile">
+                    {{faction}}
+                </span>
+            </div>
             
+            {{#unless isLocation}}
             <div class="aff-badge-large {{affClass}}" style="width: 100%; text-align: center; padding: 8px 0; border-radius: 4px; font-size: 1.2em; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
                 {{affiliation}}
             </div>

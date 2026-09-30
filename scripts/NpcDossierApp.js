@@ -84,7 +84,26 @@ export class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
     _onRender(context, options) {
         super._onRender(context, options);
         const html = $(this.element);
-
+// Launch Faction Sheet from NPC Profile
+html.on('click', '.npc-faction-link', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    
+    const factionName = $(ev.currentTarget).data('name');
+    
+    // Don't try to open sheets for system defaults
+    if (!factionName || factionName === "Unaligned" || factionName === "Locations" || factionName === "Unknown") return;
+    
+    const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+    const faction = factionDB.find(f => f.name === factionName);
+    
+    if (faction) {
+        const module = await import("./FactionSheetApp.js");
+        new module.FactionSheetApp(faction.id).render(true);
+    } else {
+        ui.notifications.warn(`NPC Architect: No detailed records exist for "${factionName}".`);
+    }
+});
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
         html.find('.mystify-toggle').hide();
 
