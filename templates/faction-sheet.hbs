@@ -1,0 +1,231 @@
+<div class="faction-sheet-container" style="--fac-color: {{faction.customColor}};">
+    <style>
+        .pf2e-npc-architect .faction-sheet-container { padding: 15px; color: #e0e0e0; background: #1c1b1a; height: 100%; overflow-y: auto; box-sizing: border-box; }
+        .pf2e-npc-architect .error-msg { color: #ff8888; text-align: center; margin-top: 20px; }
+        
+        .pf2e-npc-architect .fac-header {
+            border-bottom: 2px solid var(--fac-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pf2e-npc-architect .fac-header h1 {
+            border: none;
+            margin: 0;
+            color: var(--fac-color);
+            text-shadow: 1px 1px 2px black;
+            font-family: 'Modesto Condensed', serif;
+            letter-spacing: 1px;
+        }
+        .pf2e-npc-architect .affiliation-badge {
+            background: rgba(255,255,255,0.8);
+            color: #111;
+            padding: 6px 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+        }
+        
+        .pf2e-npc-architect .fac-panel { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; border: 1px solid #333; margin-bottom: 15px; }
+        .pf2e-npc-architect .gm-panel { background: rgba(170, 68, 68, 0.1); border-color: #aa4444; }
+        
+        .pf2e-npc-architect .fac-panel h3 { margin: 0 0 10px 0; color: #e0e0e0; border-bottom: 1px solid #5a5954; padding-bottom: 5px; font-size: 1.1em; }
+        .pf2e-npc-architect .gm-panel h3 { color: #ff8888; border-color: #aa4444; }
+        .pf2e-npc-architect .blurb-text { white-space: pre-wrap; margin: 0; line-height: 1.5; color: #ccc; font-size: 0.95em; }
+        .pf2e-npc-architect .gm-panel .blurb-text { color: #ffcccc; }
+
+        .pf2e-npc-architect .org-tree { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 10px 0; }
+        .pf2e-npc-architect .org-tier { display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; }
+        .pf2e-npc-architect .org-tier:not(:last-child)::after { content: ''; position: absolute; bottom: -40px; left: 50%; width: 2px; height: 40px; background: #5a5954; transform: translateX(-50%); }
+        
+        .pf2e-npc-architect .org-tier-title {
+            font-size: 0.85em;
+            color: var(--tier-color, #e0e0e0);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            background: #1c1b1a;
+            padding: 4px 12px;
+            border-radius: 3px;
+            border: 1px solid var(--tier-color, #e0e0e0);
+            box-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 4px var(--tier-color, #e0e0e0) inset;
+            z-index: 2;
+        }
+        
+        .pf2e-npc-architect .org-nodes { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        .pf2e-npc-architect .org-node {
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--tier-color, #e0e0e0) !important;
+            border-radius: 5px !important;
+            padding: 12px; width: 150px; text-align: center; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6), 0 0 6px var(--tier-color, #e0e0e0) !important;
+            z-index: 2;
+        }
+        .pf2e-npc-architect .ephemeral-node { border-style: dashed !important; }
+        .pf2e-npc-architect .org-node:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.8), 0 0 15px var(--tier-color, #e0e0e0) !important; }
+        .pf2e-npc-architect .org-node img { width: 100px !important; height: 100px !important; border-radius: 50% !important; object-fit: cover !important; object-position: top center !important; border: 2px solid var(--tier-color, #e0e0e0) !important; margin-bottom: 10px; background: #111; }
+        .pf2e-npc-architect .org-node-name { font-size: 1em; font-weight: bold; color: #e0e0e0; line-height: 1.2; word-wrap: break-word; }
+
+        .pf2e-npc-architect .sub-fac-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+        .pf2e-npc-architect .sub-fac-badge { background: rgba(0,0,0,0.4); border-width: 1px; border-style: solid; color: #e0e0e0; padding: 4px 10px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
+        .pf2e-npc-architect .faction-link { cursor: pointer; transition: all 0.2s ease; }
+        .pf2e-npc-architect .faction-link:hover { background: rgba(255,255,255,0.15); box-shadow: 0 0 8px rgba(255,255,255,0.2); transform: translateY(-2px); }
+    </style>
+
+    {{#if error}}
+        <p class="error-msg"><i class="fas fa-exclamation-triangle"></i> {{error}}</p>
+    {{else}}
+        {{#if mystifyBannerText}}
+            <div class="gm-mystify-banner {{mystifyBannerClass}}" style="width: 100%; padding: 4px 0; text-align: center; font-size: 0.85em; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.5); margin-bottom: 15px; border-radius: 4px;">
+                {{mystifyBannerText}}
+            </div>
+        {{/if}}
+
+        {{#if isGM}}
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button type="button" class="mystify-toggle" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid #4b4a44; color: #e0e0e0; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-user-secret"></i> Mystification Settings</button>
+            <button type="button" class="preview-toggle" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid #4b4a44; color: #e0e0e0; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas {{#if previewAsPlayer}}fa-user-tie{{else}}fa-users{{/if}}"></i> {{#if previewAsPlayer}}Return to GM View{{else}}Preview Player View{{/if}}</button>
+        </div>
+        {{/if}}
+
+        <header class="fac-header">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                {{#if faction.img}}
+                <img src="{{faction.img}}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; border: 2px solid var(--fac-color); background: rgba(0,0,0,0.3);" title="{{faction.name}} Logo">
+                {{/if}}
+                <h1 style="font-size: 3em;">{{faction.name}}</h1>
+            </div>
+            {{#if faction.affiliation}}
+                <div class="affiliation-badge">{{faction.affiliation}}</div>
+            {{/if}}
+        </header>
+
+        <div class="fac-panel">
+            <h3><i class="fas fa-book-open"></i> Public Records</h3>
+            {{#if faction.blurb}}
+                <p class="blurb-text">{{faction.blurb}}</p>
+            {{else}}
+                <p style="color: #888; font-style: italic; margin: 0; font-size: 0.9em;">No records on file.</p>
+            {{/if}}
+        </div>
+
+        {{#if hasConnections}}
+        <div class="fac-panel">
+            <h3><i class="fas fa-handshake"></i> Known Connections</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                {{#each connections}}
+                <div style="background: rgba(0,0,0,0.4); border: 1px solid {{this.color}}; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #ccc; font-size: 0.85em; font-style: italic;">{{this.label}}</span>
+                    <i class="fas fa-arrow-right" style="color: #5a5954; font-size: 0.8em;"></i>
+                    <span class="faction-link" data-id="{{this.id}}" style="font-weight: bold; color: {{this.color}}; text-shadow: 1px 1px 2px black;">{{this.name}}</span>
+                    {{#if this.secret}}
+                    <i class="fas fa-user-secret" style="color: #ff8888; margin-left: 5px;" title="GM Secret"></i>
+                    {{/if}}
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{/if}}
+
+        {{#if hasRelationships}}
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+            {{#if parent}}
+            <div class="fac-panel" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                <h3><i class="fas fa-level-up-alt"></i> Parent Organization</h3>
+                <div class="sub-fac-list">
+                    <span class="sub-fac-badge faction-link" data-id="{{parent.id}}" style="border-color: {{parent.customColor}};" title="View Faction Profile">{{parent.name}}</span>
+                </div>
+            </div>
+            {{/if}}
+
+            {{#if children.length}}
+            <div class="fac-panel" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                <h3><i class="fas fa-network-wired"></i> Sub-Factions</h3>
+                <div class="sub-fac-list">
+                    {{#each children}}
+                        <span class="sub-fac-badge faction-link" data-id="{{this.id}}" style="border-color: {{this.customColor}};" title="View Faction Profile">{{this.name}}</span>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+
+        {{#if hasHierarchy}}
+        <div class="fac-panel">
+            <h3><i class="fas fa-sitemap"></i> Chain of Command</h3>
+            <div class="org-tree">
+                {{#each hierarchy}}
+                <div class="org-tier" style="--tier-color: {{this.color}};">
+                    <div class="org-tier-title">{{this.rank}}</div>
+                    <div class="org-nodes">
+                        {{#each this.actors}}
+                        <div class="org-node {{#if this.isEphemeral}}ephemeral-node{{/if}}" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}" title="{{this.name}}">
+                            <img src="{{this.img}}">
+                            <div class="org-node-name">{{this.name}}</div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{/if}}
+        {{#if hasLocHierarchy}}
+        <div class="fac-panel">
+            <h3><i class="fas fa-map-marked-alt"></i> Controlled Facilities</h3>
+            <div class="org-tree">
+                {{#each locHierarchy}}
+                <div class="org-tier" style="--tier-color: {{this.color}};">
+                    <div class="org-tier-title">{{this.rank}}</div>
+                    <div class="org-nodes">
+                        {{#each this.actors}}
+                        <div class="org-node {{#if this.isEphemeral}}ephemeral-node{{/if}}" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}" title="{{this.name}}">
+                            <img src="{{this.img}}">
+                            <div class="org-node-name">{{this.name}}</div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+        {{/if}}
+
+        <div class="fac-panel">
+            <h3><i class="fas fa-users"></i> Party Notes</h3>
+            <div class="notes-list" style="margin-bottom: 10px;">
+                {{#each partyNotes}}
+                    <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #333; position: relative;">
+                        <strong style="color: #aaa; font-size: 0.8em;">{{this.author}}</strong>
+                        <p style="margin: 0; color: #e0e0e0; font-size: 0.95em;">{{this.text}}</p>
+                        <button type="button" class="delete-note-btn" data-index="{{@index}}" style="position: absolute; right: 0; top: 0; background: transparent; border: none; color: #ff8888; cursor: pointer; padding: 0;"><i class="fas fa-times"></i></button>
+                    </div>
+                {{else}}
+                    <p style="color: #888; font-style: italic; font-size: 0.9em;">No notes on file.</p>
+                {{/each}}
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <textarea class="note-input" placeholder="Add an observation..." style="flex: 1; background: rgba(255,255,255,0.9); color: #111; border: 1px solid #4b4a44; border-radius: 3px; padding: 5px; resize: none;" rows="2"></textarea>
+                <button type="button" class="add-note-btn" style="flex: 0 0 40px; background: rgba(255,255,255,0.1); border: 1px solid #4b4a44; color: #e0e0e0; cursor: pointer; border-radius: 3px; transition: background 0.2s;"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+       {{#if isGM}}
+        <div class="fac-panel gm-panel">
+            <h3><i class="fas fa-user-secret"></i> GM Secrets</h3>
+            {{#if faction.gmNotes}}
+                <p class="blurb-text">{{faction.gmNotes}}</p>
+            {{else}}
+                <p style="color: #aa5555; font-style: italic; margin: 0; font-size: 0.9em;">No classified notes on file.</p>
+            {{/if}}
+        {{/if}}
+    {{/if}}
+</div>

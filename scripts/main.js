@@ -20,7 +20,6 @@ Hooks.once('init', async () => {
         ],
         onDown: () => {
             const existingApp = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
-            
             if (existingApp) {
                 existingApp.close(); 
             } else {
@@ -40,7 +39,7 @@ Hooks.once('init', async () => {
         default: "All",
         onChange: () => {
             const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
-            if (dossier) dossier.render(); // V2 natively handles surgical part updates
+            if (dossier) dossier.render();
         }
     });
 
@@ -69,6 +68,23 @@ Hooks.once('init', async () => {
         default: true
     });
 
+    // --- NEW FACTION DATABASE SETTINGS ---
+    game.settings.register("pf2e-npc-architect", "factionData", {
+        name: "Faction Database",
+        scope: "world",
+        config: false, 
+        type: Array,
+        default: []
+    });
+
+    game.settings.register("pf2e-npc-architect", "factionMigrationComplete", {
+        name: "Migration Tracker",
+        scope: "world",
+        config: false, 
+        type: Boolean,
+        default: false
+    });
+
     // Pre-cache the newly sliced V2 parts for instant loading
     loadTemplates([
         "modules/pf2e-npc-architect/templates/hub-shell.hbs",
@@ -80,6 +96,7 @@ Hooks.once('init', async () => {
 
 Hooks.once("ready", async () => {
     if (game.user.isGM) {
+        // 1. Ensure the Notes Journal exists
         let notesJournal = game.journal.getName("NPC Dossier Shared Notes");
         if (!notesJournal) {
             console.log("NPC Architect | Creating Shared Notes Journal...");
@@ -87,6 +104,55 @@ Hooks.once("ready", async () => {
                 name: "NPC Dossier Shared Notes",
                 ownership: { default: 3 } 
             });
+        }
+
+        // 2. The Ironclad Faction Migrator
+        const isMigrated = game.settings.get("pf2e-npc-architect", "factionMigrationComplete");
+        
+        if (!isMigrated) {
+            console.log("NPC Architect | Initiating one-time Faction database migration...");
+            const allTracked = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
+            
+            // Pluck all unique legacy string factions
+            const legacyFactions = new Set();
+            allTracked.forEach(a => {
+                const f = a.getFlag("pf2e-npc-architect", "data")?.faction;
+                if (typeof f === "string" && f.trim() !== "") {
+                    const clean = f.trim();
+                    // Ignore hardcoded system tabs
+                    if (clean.toLowerCase() !== "unaligned" && clean.toLowerCase() !== "hidden" && clean.toLowerCase() !== "locations") {
+                        legacyFactions.add(clean);
+                    }
+                }
+            });
+
+            // Scrape the new database
+            let currentFactions = game.settings.get("pf2e-npc-architect", "factionData") || [];
+            const existingNames = currentFactions.map(f => f.name.toLowerCase());
+
+            // Build skeleton sheets for anything that doesn't exist yet
+            let addedCount = 0;
+            for (let factionName of legacyFactions) {
+                if (!existingNames.includes(factionName.toLowerCase())) {
+                    currentFactions.push({
+                        id: foundry.utils.randomID(),
+                        name: factionName,
+                        blurb: "",
+                        gmNotes: "",
+                        parentFactionId: null,
+                        customColor: "#e0e0e0" 
+                    });
+                    addedCount++;
+                }
+            }
+
+            // Save the populated DB and lock the vault permanently
+            await game.settings.set("pf2e-npc-architect", "factionData", currentFactions);
+            await game.settings.set("pf2e-npc-architect", "factionMigrationComplete", true);
+            
+            if (addedCount > 0) {
+                ui.notifications.info(`NPC Architect: Successfully migrated ${addedCount} legacy factions to the new database.`);
+            }
         }
     }
     

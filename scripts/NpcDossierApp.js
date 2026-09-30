@@ -1,5 +1,9 @@
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
+
+// ======================================================================
+// 1. PERSON OF INTEREST (EPHEMERAL) PUBLIC SHEET
+// ======================================================================
+export class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
     
     constructor(poi, options = {}) {
         options.id = `public-sheet-poi-${poi.id}-${game.user.id}`;
@@ -7,7 +11,6 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this.poi = poi;
     }
 
-    // Match your real sheet's classes exactly so the CSS binds perfectly
     static DEFAULT_OPTIONS = {
         tag: "div",
         window: { title: "NPC File", resizable: true },
@@ -63,7 +66,6 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             };
         });
 
-        // The perfect spoof payload
         return {
             actor: { name: this.poi.name, id: this.poi.id },
             isGM: game.user.isGM,
@@ -74,7 +76,7 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             affClass: affClass,
             bioPublic: this.poi.bioPublic || "",
             partyNotesList: formattedNotes.reverse(), 
-            connections: [], // Ephemerals don't have actor links yet
+            connections: [],
             isLocation: this.poi.isLocation || false,
         };
     }
@@ -84,8 +86,6 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const html = $(this.element);
 
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
-
-        // Hide Mystify button since POIs don't have real actor permissions
         html.find('.mystify-toggle').hide();
 
         html.find('.profile-img').click(ev => {
@@ -171,12 +171,21 @@ class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     cancel: { icon: '<i class="fas fa-times"></i>', label: "Cancel" }
                 },
                 default: "save",
-                render: (dHtml) => dHtml.find('input, textarea').on('contextmenu', e => e.stopPropagation())
+                render: (dHtml) => {
+                    const win = dHtml.closest('.window-content');
+                    win.css({ background: '#1c1b1a', color: '#e0e0e0', border: '1px solid #4b4a44' });
+                    win.find('.dialog-buttons').css({ margin: '0', padding: '10px 0 0 0', borderTop: '1px solid #444' });
+                    win.find('.dialog-button').css({ background: 'rgba(255,255,255,0.1)', border: '1px solid #5a5954', color: '#e0e0e0', margin: '0 5px' });
+                    dHtml.find('input, textarea').on('contextmenu', e => e.stopPropagation());
+                }
             }, { classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"] }).render(true);
         });
     }
 }
 
+// ======================================================================
+// 2. MAIN DOSSIER CAMPAIGN GRID
+// ======================================================================
 export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     
     constructor(options = {}) {
@@ -198,12 +207,16 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             resizable: true,
             contentClasses: ["dossier-container"]
         },
-        position: {
-            width: 900,
-            height: 700,
-        },
+        position: { width: 900, height: 700 },
         actions: {
-            manageFactions: NpcDossierApp.#manageFactionsDialog,
+            manageFactions: async () => {
+                const module = await import("./FactionManagerApp.js");
+                new module.FactionManagerApp().render(true);
+            },
+            assignPersonnel: async () => {
+                const module = await import("./FactionAssignmentApp.js");
+                new module.FactionAssignmentApp().render(true);
+            },
             createPoi: NpcDossierApp.#createPoiDialog
         }
     };
@@ -211,6 +224,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     static PARTS = {
         main: { template: "modules/pf2e-npc-architect/templates/dossier-grid.hbs" }
     };
+
     _onFirstRender(context, options) {
         super._onFirstRender(context, options);
 
@@ -227,6 +241,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             })
         };
     }
+
     _onClose(options) {
         if (this._liveHooks) {
             Hooks.off("updateActor", this._liveHooks.actor);
@@ -295,6 +310,11 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 }
             },
             render: (dHtml) => {
+                const win = dHtml.closest('.window-content');
+                win.css({ background: '#1c1b1a', color: '#e0e0e0', border: '1px solid #4b4a44' });
+                win.find('.dialog-buttons').css({ margin: '0', padding: '10px 0 0 0', borderTop: '1px solid #444' });
+                win.find('.dialog-button').css({ background: 'rgba(255,255,255,0.1)', border: '1px solid #5a5954', color: '#e0e0e0', margin: '0 5px' });
+
                 dHtml.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
                 dHtml.find('.move-up').click(ev => {
                     let li = $(ev.currentTarget).closest('li');
@@ -312,6 +332,12 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     static async #createPoiDialog(event, target) {
+        const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+        const factions = factionDB.map(f => f.name).sort();
+        if (!factions.includes("Unaligned")) factions.unshift("Unaligned");
+        
+        const facOptions = factions.map(f => `<option value="${f}">${f}</option>`).join("");
+
         const content = `
             <form autocomplete="off">
                 <p style="color:#e0e0e0;">Create a narrative entry without generating a full Actor sheet.</p>
@@ -320,9 +346,22 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     <label style="color:#e0e0e0;">Is this a Location?</label>
                     <input type="checkbox" id="poi-is-location">
                 </div>
-                <div class="form-group"><label style="color:#e0e0e0;">Faction</label><input type="text" id="poi-faction" value="Unaligned" style="background: rgba(255,255,255,0.9); color: #111;"></div>
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="color:#e0e0e0;">Faction</label>
+                        <select id="poi-faction" style="width: 100%; background: rgba(255,255,255,0.9); color: #111; padding: 4px; border-radius: 3px;">
+                            ${facOptions}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label id="poi-rank-label" style="color:#e0e0e0;">Rank / Title</label>
+                        <select id="poi-rank" style="width: 100%; background: rgba(255,255,255,0.9); color: #111; padding: 4px; border-radius: 3px;">
+                            <option value="">-- No Rank --</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="form-group"><label style="color:#e0e0e0;">Affiliation</label>
-                    <select id="poi-affiliation" style="background: rgba(255,255,255,0.9); color: #111;">
+                    <select id="poi-affiliation" style="width: 100%; background: rgba(255,255,255,0.9); color: #111; padding: 4px; border-radius: 3px;">
                         <option value="Neutral">Neutral</option><option value="Allied">Allied</option><option value="Friendly">Friendly</option><option value="Dislike">Dislike</option><option value="Enemy">Enemy</option>
                     </select>
                 </div>
@@ -344,6 +383,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                             name: html.find('#poi-name').val() || "Unknown",
                             img: isLoc ? "icons/svg/tower.svg" : "icons/svg/mystery-man.svg",
                             faction: html.find('#poi-faction').val(),
+                            factionRank: html.find('#poi-rank').val(),
                             affiliation: html.find('#poi-affiliation').val(),
                             bioPublic: "",
                             campaign: game.settings.get("pf2e-npc-architect", "activeCampaign") || "Global",
@@ -362,10 +402,45 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 }
             },
             render: (dHtml) => {
+                const win = dHtml.closest('.window-content');
+                win.css({ background: '#1c1b1a', color: '#e0e0e0', border: '1px solid #4b4a44' });
+                win.find('.dialog-buttons').css({ margin: '0', padding: '10px 0 0 0', borderTop: '1px solid #444' });
+                win.find('.dialog-button').css({ background: 'rgba(255,255,255,0.1)', border: '1px solid #5a5954', color: '#e0e0e0', margin: '0 5px' });
+
                 dHtml.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+                
+                const updateRanks = () => {
+                    const facName = dHtml.find('#poi-faction').val();
+                    const isLoc = dHtml.find('#poi-is-location').is(':checked');
+                    const facObj = factionDB.find(f => f.name === facName);
+                    const rankSelect = dHtml.find('#poi-rank');
+                    const rankLabel = dHtml.find('#poi-rank-label');
+                    
+                    rankSelect.empty();
+                    if (isLoc) {
+                        rankLabel.text("Facility Type");
+                        rankSelect.append('<option value="">-- No Category --</option>');
+                        const locs = facObj?.locationGroups || [];
+                        locs.forEach(lg => {
+                            const lgName = typeof lg === "string" ? lg : lg.name;
+                            rankSelect.append(`<option value="${lgName}">${lgName}</option>`);
+                        });
+                    } else {
+                        rankLabel.text("Rank / Title");
+                        rankSelect.append('<option value="">-- No Rank --</option>');
+                        const ranks = facObj?.ranks || [];
+                        ranks.forEach(r => {
+                            const rName = typeof r === "string" ? r : r.name;
+                            rankSelect.append(`<option value="${rName}">${rName}</option>`);
+                        });
+                    }
+                };
+                dHtml.find('#poi-faction, #poi-is-location').change(updateRanks);
+                updateRanks(); 
             }
-        }, { classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"] }).render(true);
+        }, { classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"], width: 450 }).render(true);
     }
+
     static async #editPoiDialog(poiId) {
         const journal = game.journal.getName("NPC Dossier Shared Notes");
         if (!journal) return;
@@ -374,6 +449,12 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const poiIndex = ephemerals.findIndex(e => e.id === poiId);
         if (poiIndex === -1) return;
         const poi = ephemerals[poiIndex];
+
+        const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+        const factions = factionDB.map(f => f.name).sort();
+        if (!factions.includes("Unaligned")) factions.unshift("Unaligned");
+        
+        const facOptions = factions.map(f => `<option value="${f}" ${poi.faction === f ? 'selected' : ''}>${f}</option>`).join("");
 
         const content = `
             <form autocomplete="off">
@@ -392,13 +473,23 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                         <button type="button" class="file-picker" data-type="imagevideo" data-target="edit-poi-img" style="flex: 0 0 32px; background: rgba(255,255,255,0.9); color: #111; border: 1px solid #4b4a44;"><i class="fas fa-file-import fa-fw"></i></button>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label style="color:#e0e0e0;">Faction</label>
-                    <input type="text" id="edit-poi-faction" value="${poi.faction}" style="background: rgba(255,255,255,0.9); color: #111;">
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="color:#e0e0e0;">Faction</label>
+                        <select id="edit-poi-faction" style="width: 100%; background: rgba(255,255,255,0.9); color: #111; padding: 4px; border-radius: 3px;">
+                            ${facOptions}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label id="edit-poi-rank-label" style="color:#e0e0e0;">Rank / Title</label>
+                        <select id="edit-poi-rank" style="width: 100%; background: rgba(255,255,255,0.9); color: #111; padding: 4px; border-radius: 3px;">
+                            <option value="">-- No Rank --</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label style="color:#e0e0e0;">Affiliation</label>
-                    <select id="edit-poi-affiliation" style="background: rgba(255,255,255,0.9); color: #111;">
+                    <select id="edit-poi-affiliation" style="background: rgba(255,255,255,0.9); color: #111; padding: 4px; border-radius: 3px; width: 100%;">
                         <option value="Neutral" ${poi.affiliation === 'Neutral' ? 'selected' : ''}>Neutral</option>
                         <option value="Allied" ${poi.affiliation === 'Allied' ? 'selected' : ''}>Allied</option>
                         <option value="Friendly" ${poi.affiliation === 'Friendly' ? 'selected' : ''}>Friendly</option>
@@ -427,6 +518,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                             isLocation: html.find('#edit-poi-is-location').is(':checked'),
                             img: html.find('#edit-poi-img').val() || "icons/svg/mystery-man.svg",
                             faction: html.find('#edit-poi-faction').val(),
+                            factionRank: html.find('#edit-poi-rank').val(),
                             affiliation: html.find('#edit-poi-affiliation').val(),
                             bioPublic: html.find('#edit-poi-bio').val()
                         };
@@ -441,28 +533,64 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     callback: async () => {
                         ephemerals.splice(poiIndex, 1);
                         await journal.setFlag("pf2e-npc-architect", "ephemeralNPCs", ephemerals);
-                        await journal.unsetFlag("pf2e-npc-architect", `notes_${poiId}`); // Cleanup notes if they had any
+                        await journal.unsetFlag("pf2e-npc-architect", `notes_${poiId}`); 
                         const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
                         if (dossier) dossier.render(false);
                     }
                 }
             },
-            render: (html) => {
-                // Hook up the image FilePicker
-                html.find('.file-picker').click(ev => {
+            render: (dHtml) => {
+                const win = dHtml.closest('.window-content');
+                win.css({ background: '#1c1b1a', color: '#e0e0e0', border: '1px solid #4b4a44' });
+                win.find('.dialog-buttons').css({ margin: '0', padding: '10px 0 0 0', borderTop: '1px solid #444' });
+                win.find('.dialog-button').css({ background: 'rgba(255,255,255,0.1)', border: '1px solid #5a5954', color: '#e0e0e0', margin: '0 5px' });
+
+                dHtml.find('.file-picker').click(ev => {
                     ev.preventDefault();
                     const button = ev.currentTarget;
                     const target = button.dataset.target;
                     new FilePicker({
                         type: button.dataset.type,
-                        current: html.find(`#${target}`).val(),
-                        callback: path => { html.find(`#${target}`).val(path); }
+                        current: dHtml.find(`#${target}`).val(),
+                        callback: path => { dHtml.find(`#${target}`).val(path); }
                     }).render(true);
                 });
-                html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+                dHtml.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+                
+                const updateRanks = () => {
+                    const facName = dHtml.find('#edit-poi-faction').val();
+                    const isLoc = dHtml.find('#edit-poi-is-location').is(':checked');
+                    const facObj = factionDB.find(f => f.name === facName);
+                    const rankSelect = dHtml.find('#edit-poi-rank');
+                    const rankLabel = dHtml.find('#edit-poi-rank-label');
+                    
+                    rankSelect.empty();
+                    if (isLoc) {
+                        rankLabel.text("Facility Type");
+                        rankSelect.append('<option value="">-- No Category --</option>');
+                        const locs = facObj?.locationGroups || [];
+                        locs.forEach(lg => {
+                            const lgName = typeof lg === "string" ? lg : lg.name;
+                            const isSelected = poi.factionRank === lgName ? 'selected' : '';
+                            rankSelect.append(`<option value="${lgName}" ${isSelected}>${lgName}</option>`);
+                        });
+                    } else {
+                        rankLabel.text("Rank / Title");
+                        rankSelect.append('<option value="">-- No Rank --</option>');
+                        const ranks = facObj?.ranks || [];
+                        ranks.forEach(r => {
+                            const rName = typeof r === "string" ? r : r.name;
+                            const isSelected = poi.factionRank === rName ? 'selected' : '';
+                            rankSelect.append(`<option value="${rName}" ${isSelected}>${rName}</option>`);
+                        });
+                    }
+                };
+                dHtml.find('#edit-poi-faction, #edit-poi-is-location').change(updateRanks);
+                updateRanks(); 
             }
         }, { classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"], width: 450 }).render(true);
     }
+
     static async #viewPoiPublicDialog(poiId) {
         const journal = game.journal.getName("NPC Dossier Shared Notes");
         if (!journal) return;
@@ -472,6 +600,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         
         if (poi) new PoiPublicSheetApp(poi).render(true);
     }
+
     async _prepareContext(options) {
         const allTracked = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.tracked);
 
@@ -502,7 +631,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             let mystifyBannerText = null;
             let mystifyBannerClass = "";
             if (game.user.isGM && isMystified) {
-                const anyRevealed = opts.revealName || opts.revealPic || opts.revealFaction || opts.revealAff || opts.revealBio || opts.revealConn;
+                const anyRevealed = (opts.revealName === true) || (opts.revealPic === true) || (opts.revealFaction === true) || (opts.revealAff === true) || (opts.revealBio === true) || (opts.revealConn === true);
                 mystifyBannerText = anyRevealed ? "Partially Hidden" : "Fully Hidden";
                 mystifyBannerClass = anyRevealed ? "banner-partial" : "banner-full";
             }
@@ -550,7 +679,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     const connMystified = connActor.getFlag("pf2e-npc-architect", "mystified") || false;
                     const connOpts = connActor.getFlag("pf2e-npc-architect", "mystifyOptions") || {};
                     
-                    const enforceConnMystify = connMystified && !game.user.isGM;
+                    const enforceConnMystify = connMystified && (!game.user.isGM || this.previewAsPlayer);
                     
                     const realName = (enforceConnMystify && !connOpts.revealName) ? "Unknown Entity" : connActor.name;
                     let displayImg = (enforceConnMystify && !connOpts.revealPic) ? "icons/svg/mystery-man.svg" : connActor.img;
@@ -573,7 +702,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
             let finalFaction = flags.faction || "Unaligned";
             if (hideFaction) finalFaction = "Unknown";
-            else if (isLocation) finalFaction = "Locations";
+            else if (isLocation && (finalFaction === "Unaligned" || finalFaction === "")) finalFaction = "Locations";
 
             return {
                 id: actor.id,
@@ -586,6 +715,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 activeCampaign: currentCampaign,
                 isLocation: isLocation, 
                 faction: finalFaction, 
+                factionRank: flags.factionRank || "",
                 affiliation: affLabel,
                 affClass: affClass, 
                 blurb: hideBio ? "Records redacted." : (flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details.")),
@@ -595,9 +725,6 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             };
         });
 
-        // ----------------------------------------------------
-        // INJECT EPHEMERAL POIs HERE
-        // ----------------------------------------------------
         const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
         const ephemerals = notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", "ephemeralNPCs") || []) : [];
 
@@ -612,6 +739,9 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 affClass = rawAff.toLowerCase();
             }
 
+            let safeFaction = poi.faction || "Unaligned";
+            if (isLoc && (safeFaction === "Unaligned" || safeFaction === "")) safeFaction = "Locations";
+
             return {
                 id: poi.id,
                 name: poi.name,
@@ -622,7 +752,8 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 campaignOptions: campaignOptions,
                 activeCampaign: poi.campaign || "Global",
                 isLocation: isLoc,
-                faction: isLoc ? "Locations" : (poi.faction || "Unaligned"),
+                faction: safeFaction,
+                factionRank: poi.factionRank || "",
                 affiliation: affLabel,
                 affClass: affClass,
                 blurb: poi.bioPublic || (isLoc ? "No location details." : "No public details."),
@@ -651,10 +782,14 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             return acc;
         }, {});
 
-        const affWeights = { "Allied": 5, "Friendly": 4, "Neutral": 3, "???": 2, "Dislike": 1, "Enemy": 0 };
+        const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
         const savedColors = game.settings.get("pf2e-npc-architect", "factionColors") || {};
+        const affWeights = { "Allied": 5, "Friendly": 4, "Neutral": 3, "???": 2, "Dislike": 1, "Enemy": 0 };
+        const savedOrder = game.settings.get("pf2e-npc-architect", "factionOrder") || [];
+        
+        let factionList = [];
 
-        let factionList = Object.keys(groups).map(key => {
+        Object.keys(groups).forEach(key => {
             groups[key].sort((a, b) => {
                 if (this.currentSort === "affiliation") {
                     const weightA = affWeights[a.affiliation] ?? 2;
@@ -665,23 +800,108 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     return a.name.localeCompare(b.name); 
                 }
             });
-            return { name: key, color: savedColors[key] || "#e0e0e0", cards: groups[key] };
         });
 
-        let savedOrder = game.settings.get("pf2e-npc-architect", "factionOrder") || [];
-        
-        factionList.sort((a, b) => {
-            if (a.name === "Unaligned") return 1;
-            if (b.name === "Unaligned") return -1;
-            
+        const topLevelFactions = factionDB.filter(f => !f.parentFactionId || !factionDB.find(p => p.id === f.parentFactionId));
+        topLevelFactions.sort((a, b) => {
             let indexA = savedOrder.indexOf(a.name);
             let indexB = savedOrder.indexOf(b.name);
-            
             if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
             if (indexA === -1) return 1;
             if (indexB === -1) return -1;
-            
             return indexA - indexB;
+        });
+
+        const processFaction = (facObj, isSub) => {
+            const facCards = groups[facObj.name] || [];
+            
+            const personnelCards = facCards.filter(c => !c.isLocation);
+            const locationCards = facCards.filter(c => c.isLocation);
+            
+            const enforceMystify = facObj.mystified && (!game.user.isGM || this.previewAsPlayer);
+            const opts = facObj.mystifyOptions || {};
+
+            const displayName = (enforceMystify && !opts.revealName) ? "Unknown Faction" : facObj.name;
+            const displayImg = (enforceMystify && !opts.revealImg) ? null : (facObj.img || null);
+            const showTree = facObj.displayAsTree && !(enforceMystify && !opts.revealRanks);
+
+            let hierarchy = [];
+            let locHierarchy = [];
+            
+            if (showTree) {
+                // Parse Personnel Ranks
+                const ranks = (facObj.ranks || []).map(r => ({
+                    rank: typeof r === "string" ? r : r.name,
+                    color: typeof r === "string" ? (facObj.customColor || savedColors[facObj.name] || "#e0e0e0") : (r.color || facObj.customColor || savedColors[facObj.name] || "#e0e0e0"),
+                    actors: []
+                }));
+                const unranked = { rank: "Unranked / Operatives", color: "#888888", actors: [] };
+                
+                personnelCards.forEach(c => {
+                    const tier = ranks.find(t => t.rank === c.factionRank);
+                    if (tier) tier.actors.push(c);
+                    else unranked.actors.push(c);
+                });
+                hierarchy = ranks.filter(t => t.actors.length > 0);
+                if (unranked.actors.length > 0) hierarchy.push(unranked);
+
+                // Parse Facility Types
+                const locGroups = (facObj.locationGroups || []).map(lg => ({
+                    rank: typeof lg === "string" ? lg : lg.name,
+                    color: typeof lg === "string" ? (facObj.customColor || savedColors[facObj.name] || "#e0e0e0") : (lg.color || facObj.customColor || savedColors[facObj.name] || "#e0e0e0"),
+                    actors: []
+                }));
+                const ungroupedLocs = { rank: "Uncategorized Locations", color: "#888888", actors: [] };
+                
+                locationCards.forEach(c => {
+                    const tier = locGroups.find(t => t.rank === c.factionRank);
+                    if (tier) tier.actors.push(c);
+                    else ungroupedLocs.actors.push(c);
+                });
+                locHierarchy = locGroups.filter(t => t.actors.length > 0);
+                if (ungroupedLocs.actors.length > 0) locHierarchy.push(ungroupedLocs);
+            }
+
+            if (facCards.length > 0 || showTree) {
+                factionList.push({ 
+                    id: facObj.id, 
+                    name: displayName, 
+                    color: facObj.customColor || savedColors[facObj.name] || "#e0e0e0",
+                    img: displayImg,
+                    personnelCards: personnelCards,
+                    locationCards: locationCards,
+                    isSubFaction: isSub,
+                    displayAsTree: showTree,
+                    hierarchy: hierarchy,
+                    locHierarchy: locHierarchy
+                });
+            }
+            delete groups[facObj.name];
+
+            const children = factionDB.filter(f => f.parentFactionId === facObj.id).sort((a, b) => a.name.localeCompare(b.name));
+            children.forEach(child => processFaction(child, true));
+        };
+
+        topLevelFactions.forEach(f => processFaction(f, false));
+
+        // Legacy Groups Fallback
+        Object.keys(groups).sort((a, b) => {
+            if (a === "Unaligned") return 1;
+            if (b === "Unaligned") return -1;
+            return a.localeCompare(b);
+        }).forEach(facName => {
+            if (groups[facName].length > 0) {
+                const facDbEntry = factionDB.find(f => f.name === facName);
+                factionList.push({
+                    id: facDbEntry ? facDbEntry.id : facName, 
+                    name: facName,
+                    color: savedColors[facName] || "#e0e0e0",
+                    img: facDbEntry ? facDbEntry.img : null, 
+                    personnelCards: groups[facName].filter(c => !c.isLocation),
+                    locationCards: groups[facName].filter(c => c.isLocation),
+                    isSubFaction: false, displayAsTree: false, hierarchy: [], locHierarchy: []
+                });
+            }
         });
 
         return { 
@@ -719,8 +939,6 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
 
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
-        
-    
 
         html.find('.card-image').click(ev => {
             ev.stopPropagation(); 
@@ -739,11 +957,13 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 });
             }
         });
+        
         html.find('.dossier-card.ephemeral').contextmenu(ev => {
             ev.preventDefault();
             ev.stopPropagation();
             NpcDossierApp.#editPoiDialog(ev.currentTarget.dataset.id);
         });
+        
         html.find('.dossier-card:not(.ephemeral)').contextmenu(ev => {
             if (!game.user.isGM) return;
             const actorId = ev.currentTarget.dataset.id;
@@ -782,9 +1002,6 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             });
         });
 
-        // ----------------------------------------------------
-        // EPHEMERAL DRAG BLOCKING & "BIND TO ACTOR" DROPZONE
-        // ----------------------------------------------------
         html.find('.dossier-card.ephemeral').on('dragstart', ev => ev.preventDefault());
         html.find('.dossier-card.ephemeral').on('dragover', ev => ev.preventDefault());
         
@@ -849,7 +1066,13 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     },
                     cancel: { label: "Cancel", icon: '<i class="fas fa-times"></i>' }
                 },
-                default: "bind"
+                default: "bind",
+                render: (dHtml) => {
+                    const win = dHtml.closest('.window-content');
+                    win.css({ background: '#1c1b1a', color: '#e0e0e0', border: '1px solid #4b4a44' });
+                    win.find('.dialog-buttons').css({ margin: '0', padding: '10px 0 0 0', borderTop: '1px solid #444' });
+                    win.find('.dialog-button').css({ background: 'rgba(255,255,255,0.1)', border: '1px solid #5a5954', color: '#e0e0e0', margin: '0 5px' });
+                }
             }, { classes: ["pf2e-npc-architect", "dialog", "dossier-dark-dialog"] }).render(true);
         });
 
@@ -857,8 +1080,8 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             const term = ev.currentTarget.value.toLowerCase();
             html.find('.faction-group').each((i, group) => {
                 let hasVisibleCard = false;
-                $(group).find('.dossier-card').each((j, card) => {
-                    const name = $(card).find('.card-title').text().toLowerCase();
+                $(group).find('.dossier-card, .org-node').each((j, card) => {
+                    const name = $(card).find('.card-title, .org-node-name').text().toLowerCase();
                     const blurb = $(card).find('.card-blurb').text().toLowerCase();
                     if (name.includes(term) || blurb.includes(term)) {
                         $(card).removeClass('hidden-by-search');
@@ -886,9 +1109,52 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             }
         });
 
-        html.find('.faction-toggle').click((ev) => {
+        html.on('click', '.faction-name-link', async (ev) => {
+            ev.stopPropagation();
+            const factionId = String($(ev.currentTarget).data('id')); 
+            const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+            const faction = factionDB.find(f => f.id === factionId || f.name === factionId); 
+            
+            if (faction) {
+                const module = await import("./FactionSheetApp.js");
+                new module.FactionSheetApp(faction.id).render(true);
+            } else {
+                ui.notifications.warn("No detailed records exist for this group yet.");
+            }
+        });
+
+        html.on('contextmenu', '.faction-name-link', async (ev) => {
+            if (!game.user.isGM) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            
+            const factionId = String($(ev.currentTarget).data('id')); 
+            let factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+            let faction = factionDB.find(f => f.id === factionId || f.name === factionId);
+            
+            if (!faction) {
+                const newId = foundry.utils.randomID();
+                faction = {
+                    id: newId, name: factionId, img: "", displayAsTree: false,
+                    mystified: false, mystifyOptions: { revealName: false, revealImg: false, revealBlurb: false, revealAff: false, revealConn: false, revealRanks: false },
+                    blurb: "", gmNotes: "", affiliation: "Neutral", parentFactionId: null, customColor: "#e0e0e0", ranks: [], locationGroups: [], connections: []
+                };
+                factionDB.push(faction);
+                await game.settings.set("pf2e-npc-architect", "factionData", factionDB);
+                ui.notifications.info(`NPC Architect: Initialized new faction database for "${factionId}".`);
+            }
+            
+            const module = await import("./FactionManagerApp.js");
+            const app = new module.FactionManagerApp();
+            app.activeFactionId = faction.id; 
+            app.render(true);
+        });
+
+        html.find('.faction-toggle-icon').click(ev => {
+            ev.stopPropagation();
+            const icon = $(ev.currentTarget);
+            icon.toggleClass('fa-chevron-down fa-chevron-right');
             const header = $(ev.currentTarget);
-            const icon = header.find('i');
             const grid = header.closest('.faction-group').find('.dossier-grid');
             grid.slideToggle(200, () => {
                 if (grid.is(':visible')) {
@@ -897,6 +1163,41 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                     icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
                 }
             });
+        });
+
+        html.on('click', '.org-node', async ev => {
+            const card = ev.currentTarget;
+            const actorId = card.dataset.id;
+            const isEphemeral = card.dataset.ephemeral === "true";
+
+            if (isEphemeral) {
+                NpcDossierApp.#viewPoiPublicDialog(actorId);
+            } else {
+                const actor = game.actors.get(actorId);
+                if (!actor) return;
+                import("./NpcPublicSheetApp.js").then(module => {
+                    new module.NpcPublicSheetApp(actor).render(true);
+                });
+            }
+        });
+
+        html.on('contextmenu', '.org-node', ev => {
+            if (!game.user.isGM) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            
+            const card = ev.currentTarget;
+            const actorId = card.dataset.id;
+            const isEphemeral = card.dataset.ephemeral === "true";
+
+            if (isEphemeral) {
+                NpcDossierApp.#editPoiDialog(actorId);
+            } else {
+                const actor = game.actors.get(actorId);
+                if (actor) {
+                    import("./NpcArchitectApp.js").then(m => new m.NpcArchitectApp(actor).render(true));
+                }
+            }
         });
     }
 }

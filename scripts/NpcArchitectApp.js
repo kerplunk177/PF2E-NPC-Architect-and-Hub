@@ -42,7 +42,20 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
         data.tracked = flags.tracked || false;
         data.isLocation = flags.isLocation || false;
         data.campaign = flags.campaign || "Global";
-        data.faction = flags.faction || "";
+        
+        const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+        const existingFactions = factionDB.map(f => f.name).sort();
+        if (!existingFactions.includes("Unaligned")) existingFactions.unshift("Unaligned");
+        
+        const currentFactionName = String(flags.faction || "Unaligned").trim();
+        const currentFactionObj = factionDB.find(f => f.name === currentFactionName);
+        const availableRanks = currentFactionObj?.ranks || [];
+
+        data.faction = currentFactionName;
+        data.availableFactions = existingFactions;
+        data.factionRank = flags.factionRank || "";
+        data.availableRanks = availableRanks;
+        data.hasRanks = availableRanks.length > 0;
 
         data.affiliations = {
             "Allied": "Allied",
@@ -165,7 +178,23 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const formData = new FormDataExtended(ev.currentTarget).object;
         this._updateObject(ev, formData);
     });
-
+// Right-Click Faction Name (GM Only): Open Faction Manager directly to this faction
+html.find('.faction-name-link').contextmenu(async (ev) => {
+    if (!game.user.isGM) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    
+    const factionName = $(ev.currentTarget).data('name');
+    const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+    const faction = factionDB.find(f => f.name === factionName);
+    
+    if (faction) {
+        const module = await import("./FactionManagerApp.js");
+        const app = new module.FactionManagerApp();
+        app.activeFactionId = faction.id; // Boot directly into this specific profile
+        app.render(true);
+    }
+});
     html.find('form').on('submit', ev => {
         ev.preventDefault(); 
         if ($(ev.target).closest('#builder-editor').length) return;

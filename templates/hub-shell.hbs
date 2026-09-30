@@ -31,13 +31,27 @@
     </select>
 </div>
             <div class="form-group">
-                <label><strong>Faction / Organization</strong></label>
-                <div class="form-fields" style="display: flex; align-items: center; gap: 10px;">
-                    <label style="color: #e0e0e0; white-space: nowrap; margin: 0;">
+                <label><strong>Faction / Organization & Title</strong></label>
+                <div class="form-fields" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label style="color: #e0e0e0; white-space: nowrap; margin: 0; flex: 0 0 auto;">
                         <input type="checkbox" name="isLocation" {{#if isLocation}}checked{{/if}}> 
                         Treat as Location
                     </label>
-                    <input type="text" name="faction" value="{{faction}}" placeholder="e.g. City Watch, The Obsidian Cult" style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; padding: 4px;">
+                    
+                    <select name="faction" style="flex: 1; min-width: 150px; background: rgba(255,255,255,0.9); color: #111; border: 1px solid #4b4a44; padding: 4px; border-radius: 3px;">
+                        {{#each availableFactions}}
+                            <option value="{{this}}" {{#if (eq this ../faction)}}selected{{/if}}>{{this}}</option>
+                        {{/each}}
+                    </select>
+                    
+                    {{#if hasRanks}}
+                    <select name="factionRank" style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.9); color: #111; border: 1px solid #4b4a44; padding: 4px; border-radius: 3px;">
+                        <option value="">-- No Rank --</option>
+                        {{#each availableRanks}}
+                            <option value="{{this}}" {{#if (eq this ../factionRank)}}selected{{/if}}>{{this}}</option>
+                        {{/each}}
+                    </select>
+                    {{/if}}
                 </div>
             </div>
 

@@ -1,0 +1,161 @@
+<div class="pf2e-npc-architect" style="display: flex; height: 100%; color: #e0e0e0; background: #1c1b1a;">
+    <style>
+        .pf2e-npc-architect .assigner-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 15px; }
+        .pf2e-npc-architect .left-pane { flex: 0 0 320px; border-right: 2px solid #5a5954; background: rgba(0,0,0,0.2); }
+        .pf2e-npc-architect .roster-search { width: 100%; background: rgba(255,255,255,0.95); color: #111; border: 1px solid #4b4a44; padding: 8px; border-radius: 4px; font-family: inherit; margin-bottom: 15px; box-sizing: border-box; }
+        .pf2e-npc-architect .scroll-area { flex: 1; overflow-y: auto; padding-right: 10px; }
+        
+        .pf2e-npc-architect .personnel-chip { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); border: 1px solid #4b4a44; padding: 6px; border-radius: 4px; margin-bottom: 8px; cursor: grab; transition: background 0.2s, border-color 0.2s; }
+        .pf2e-npc-architect .personnel-chip:hover { background: rgba(255,255,255,0.1); border-color: #888; }
+        .pf2e-npc-architect .personnel-chip:active { cursor: grabbing; }
+        .pf2e-npc-architect .personnel-chip img { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; background: #111; border: 1px solid #333; }
+        .pf2e-npc-architect .chip-info { display: flex; flex-direction: column; overflow: hidden; }
+        .pf2e-npc-architect .chip-name { font-weight: bold; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e0e0e0; }
+        .pf2e-npc-architect .chip-fac { font-size: 0.75em; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+        
+        .pf2e-npc-architect .org-block { background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 6px; margin-bottom: 25px; overflow: hidden; }
+        .pf2e-npc-architect .org-header { background: rgba(0,0,0,0.4); padding: 10px 15px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
+        .pf2e-npc-architect .org-header h3 { margin: 0; font-size: 1.2em; color: var(--fac-color, #e0e0e0); text-shadow: 1px 1px 2px black; }
+        
+        .pf2e-npc-architect .sub-header { background: rgba(255,255,255,0.05); padding: 6px 15px; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; color: #ccc; border-bottom: 1px solid #333; }
+        
+        .pf2e-npc-architect .rank-row { padding: 10px 15px; border-bottom: 1px solid #333; background: rgba(255,255,255,0.02); transition: background 0.2s; }
+        .pf2e-npc-architect .rank-row:last-child { border-bottom: none; }
+        .pf2e-npc-architect .rank-title { font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; color: var(--rank-color, #aaa); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .pf2e-npc-architect .drop-hint { font-size: 0.8em; color: #666; font-style: italic; text-transform: none; font-weight: normal; letter-spacing: 0; pointer-events: none; }
+        .pf2e-npc-architect .drop-zone.drag-hover { background: rgba(68,170,68,0.2) !important; border-color: #44aa44 !important; }
+        
+        .pf2e-npc-architect .assigned-grid { display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; align-items: center; }
+        .pf2e-npc-architect .assigned-grid .personnel-chip { margin: 0; background: rgba(0,0,0,0.6); }
+    </style>
+
+    <!-- LEFT: MASTER ROSTER -->
+    <div class="assigner-pane left-pane">
+        <h2 style="margin: 0 0 15px 0; border-bottom: 2px solid #5a5954; padding-bottom: 10px; font-family: 'Modesto Condensed', serif; letter-spacing: 1px;">Master Roster</h2>
+        <input type="text" class="roster-search" placeholder="Search by name...">
+        <div class="scroll-area master-roster-list">
+            <h3 style="color: #aaa; border-bottom: 1px solid #333; margin-bottom: 10px; padding-bottom: 5px; font-size: 0.9em; text-transform: uppercase;">Personnel</h3>
+            {{#each masterChars}}
+            <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                <img src="{{this.img}}">
+                <div class="chip-info">
+                    <div class="chip-name" title="{{this.name}}">{{this.name}}</div>
+                    <div class="chip-fac">{{this.faction}}{{#if this.rank}} - {{this.rank}}{{/if}}</div>
+                </div>
+            </div>
+            {{/each}}
+            
+            <h3 style="color: #aaa; border-bottom: 1px solid #333; margin-top: 20px; margin-bottom: 10px; padding-bottom: 5px; font-size: 0.9em; text-transform: uppercase;">Locations</h3>
+            {{#each masterLocs}}
+            <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                <img src="{{this.img}}">
+                <div class="chip-info">
+                    <div class="chip-name" title="{{this.name}}">{{this.name}}</div>
+                    <div class="chip-fac">{{this.faction}}{{#if this.rank}} - {{this.rank}}{{/if}}</div>
+                </div>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+
+    <!-- RIGHT: ORGS & RANKS -->
+    <div class="assigner-pane right-pane">
+        <h2 style="margin: 0 0 15px 0; border-bottom: 2px solid #5a5954; padding-bottom: 10px; font-family: 'Modesto Condensed', serif; letter-spacing: 1px;">Assignments</h2>
+        <div class="scroll-area">
+            
+            {{#each orgs}}
+            <div class="org-block" style="--fac-color: {{this.color}};">
+                <div class="org-header">
+                    <h3>{{this.name}}</h3>
+                </div>
+                
+                <!-- PERSONNEL SECTION -->
+                <div class="sub-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-users"></i> Chain of Command</span>
+                    <button type="button" class="inline-add-rank" data-faction="{{this.name}}" data-type="rank" style="background: transparent; border: none; color: #aaa; cursor: pointer; padding: 0;" title="Add Rank"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="rank-row drop-zone" data-faction="{{this.name}}" data-rank="">
+                    <div class="rank-title"><span>Unranked / Operatives</span><span class="drop-hint">Drop to assign</span></div>
+                    <div class="assigned-grid">
+                        {{#each this.unrankedChars}}
+                        <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                            <img src="{{this.img}}" title="{{this.name}}">
+                            <div class="chip-info"><div class="chip-name">{{this.name}}</div></div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{#each this.ranks}}
+                <div class="rank-row drop-zone" data-faction="{{../name}}" data-rank="{{this.name}}" style="--rank-color: {{this.color}};">
+                    <div class="rank-title"><span>{{this.name}}</span><span class="drop-hint">Drop here</span></div>
+                    <div class="assigned-grid">
+                        {{#each this.personnel}}
+                        <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                            <img src="{{this.img}}" title="{{this.name}}">
+                            <div class="chip-info"><div class="chip-name">{{this.name}}</div></div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/each}}
+
+                <!-- LOCATIONS SECTION -->
+                <div class="sub-header" style="border-top: 1px solid #444; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-map-marked-alt"></i> Controlled Facilities</span>
+                    <button type="button" class="inline-add-rank" data-faction="{{this.name}}" data-type="loc" style="background: transparent; border: none; color: #aaa; cursor: pointer; padding: 0;" title="Add Facility Type"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="rank-row drop-zone" data-faction="{{this.name}}" data-rank="">
+                    <div class="rank-title"><span>Uncategorized Locations</span><span class="drop-hint">Drop to assign</span></div>
+                    <div class="assigned-grid">
+                        {{#each this.ungroupedLocs}}
+                        <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                            <img src="{{this.img}}" title="{{this.name}}">
+                            <div class="chip-info"><div class="chip-name">{{this.name}}</div></div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{#each this.locGroups}}
+                <div class="rank-row drop-zone" data-faction="{{../name}}" data-rank="{{this.name}}" style="--rank-color: {{this.color}};">
+                    <div class="rank-title"><span>{{this.name}}</span><span class="drop-hint">Drop here</span></div>
+                    <div class="assigned-grid">
+                        {{#each this.locations}}
+                        <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                            <img src="{{this.img}}" title="{{this.name}}">
+                            <div class="chip-info"><div class="chip-name">{{this.name}}</div></div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+            {{/each}}
+            
+            <!-- UNASSIGNED FALLBACK ZONE -->
+            <div class="org-block" style="border-color: #5a5954;">
+                <div class="org-header drop-zone" data-faction="Unaligned" data-rank="" style="background: rgba(255,255,255,0.05);">
+                    <h3 style="color: #aaa;">Unaligned / Unaffiliated</h3>
+                    <span class="drop-hint">Drop here to remove from a Faction</span>
+                </div>
+                <div class="rank-row">
+                    <div class="assigned-grid">
+                        {{#each unalignedChars}}
+                        <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                            <img src="{{this.img}}" title="{{this.name}}">
+                            <div class="chip-info"><div class="chip-name">{{this.name}}</div></div>
+                        </div>
+                        {{/each}}
+                        {{#each unalignedLocs}}
+                        <div class="personnel-chip" draggable="true" data-id="{{this.id}}" data-ephemeral="{{this.isEphemeral}}">
+                            <img src="{{this.img}}" title="{{this.name}}">
+                            <div class="chip-info"><div class="chip-name">{{this.name}}</div></div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

@@ -1,0 +1,200 @@
+<div class="pf2e-npc-architect" style="display: flex; height: 100%; color: #e0e0e0; background: #1c1b1a;">
+    <style>
+        .pf2e-npc-architect select option { background: #e0e0e0 !important; color: #111 !important; }
+        
+        /* Standardized Inputs */
+        .fac-mgr-input { width: 100%; background: rgba(255,255,255,0.95); color: #111; border: 1px solid #4b4a44; padding: 0 8px; border-radius: 4px; font-family: inherit; height: 32px; box-sizing: border-box; }
+        .fac-mgr-textarea { width: 100%; background: rgba(255,255,255,0.95); color: #111; border: 1px solid #4b4a44; padding: 8px; border-radius: 4px; font-family: inherit; resize: vertical; box-sizing: border-box; }
+        .fac-mgr-textarea.secret { background: rgba(255,255,255,0.7); }
+        .fac-mgr-label { font-weight: bold; color: #aaa; display: block; margin-bottom: 6px; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* Standardized Buttons */
+        .fac-mgr-btn { background: rgba(255,255,255,0.1); border: 1px solid #4b4a44; color: #e0e0e0; cursor: pointer; border-radius: 4px; transition: all 0.2s; height: 32px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: bold; padding: 0 12px; }
+        .fac-mgr-btn:hover { background: rgba(255,255,255,0.2); box-shadow: 0 0 8px rgba(255,255,255,0.15); color: #fff; }
+        .fac-mgr-btn.danger { background: rgba(170,68,68,0.2); border-color: #aa4444; color: #ffaaaa; }
+        .fac-mgr-btn.danger:hover { background: rgba(170,68,68,0.4); box-shadow: 0 0 8px rgba(170,68,68,0.4); }
+        .fac-mgr-btn.success { background: rgba(68,170,68,0.2); border-color: #44aa44; color: #aaffaa; }
+        .fac-mgr-btn.success:hover { background: rgba(68,170,68,0.4); box-shadow: 0 0 8px rgba(68,170,68,0.4); }
+        .fac-mgr-btn.icon-only { width: 32px; padding: 0; flex: 0 0 32px; }
+        
+        /* Grid Layouts */
+        .fac-grid-top { display: grid; grid-template-columns: 2.5fr 50px 2fr; gap: 15px; align-items: end; margin-bottom: 15px; }
+        .fac-grid-sub { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; align-items: end; margin-bottom: 20px; }
+        .fac-grid-text { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; align-items: start; }
+        
+        /* Containment Panels */
+        .fac-panel { background: rgba(255,255,255,0.03); border: 1px solid #333; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .fac-panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px; }
+        .fac-panel-title { font-weight: bold; color: #e0e0e0; font-size: 1.1em; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* Custom Toggles - Checkbox fix! */
+        .fac-toggle-label { display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(0,0,0,0.4); color: #e0e0e0; border: 1px solid #4b4a44; border-radius: 4px; height: 32px; cursor: pointer; font-size: 0.9em; font-weight: bold; box-sizing: border-box; }
+        .fac-toggle-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
+        .fac-color-swatch { width: 100%; height: 32px; padding: 0; border: 1px solid #4b4a44; border-radius: 4px; cursor: pointer; background: transparent; }
+    </style>
+
+    <!-- LEFT SIDEBAR -->
+    <div style="flex: 0 0 250px; border-right: 2px solid #5a5954; display: flex; flex-direction: column; padding: 10px;">
+        <button type="button" class="add-faction-btn fac-mgr-btn" style="margin-bottom: 10px; width: 100%;">
+            <i class="fas fa-plus"></i> New Faction
+        </button>
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px;">
+            {{#each factions}}
+            <div class="faction-list-item" data-id="{{this.id}}" style="padding: 10px; background: {{#if (eq this.id ../activeFaction.id)}}rgba(255,255,255,0.2){{else}}rgba(0,0,0,0.3){{/if}}; border: 1px solid #4b4a44; cursor: pointer; border-radius: 4px; transition: background 0.2s;">
+                <strong style="color: {{this.customColor}}; text-shadow: 1px 1px 2px black;">{{this.name}}</strong>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+    
+    <!-- RIGHT EDITOR -->
+    <div style="flex: 1; padding: 20px; overflow-y: auto;">
+        {{#if hasFactions}}
+        
+        <!-- TOP ROW GRID -->
+        <div class="fac-grid-top">
+            <div>
+                <label class="fac-mgr-label">Faction Name</label>
+                <input type="text" id="fac-name" class="fac-mgr-input" value="{{activeFaction.name}}">
+            </div>
+            <div>
+                <label class="fac-mgr-label">Color</label>
+                <input type="color" id="fac-color" class="fac-color-swatch" value="{{activeFaction.customColor}}">
+            </div>
+            <div>
+                <label class="fac-mgr-label">Flag / Logo Image</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="fac-img" class="fac-mgr-input" value="{{activeFaction.img}}" style="flex: 1;" placeholder="path/to/image.png">
+                    <button type="button" class="file-picker fac-mgr-btn icon-only" data-type="imagevideo" data-target="fac-img"><i class="fas fa-file-import"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB ROW GRID -->
+        <div class="fac-grid-sub">
+            <div>
+                <label class="fac-mgr-label">Affiliation</label>
+                <select id="fac-affiliation" class="fac-mgr-input">
+                    <option value="Neutral" {{#if (eq activeFaction.affiliation "Neutral")}}selected{{/if}}>Neutral</option>
+                    <option value="Allied" {{#if (eq activeFaction.affiliation "Allied")}}selected{{/if}}>Allied</option>
+                    <option value="Friendly" {{#if (eq activeFaction.affiliation "Friendly")}}selected{{/if}}>Friendly</option>
+                    <option value="Dislike" {{#if (eq activeFaction.affiliation "Dislike")}}selected{{/if}}>Dislike</option>
+                    <option value="Enemy" {{#if (eq activeFaction.affiliation "Enemy")}}selected{{/if}}>Enemy</option>
+                </select>
+            </div>
+            <div>
+                <label class="fac-mgr-label">Parent Faction</label>
+                <select id="fac-parent" class="fac-mgr-input">
+                    <option value="">-- None --</option>
+                    {{#each parentOptions}}
+                    <option value="{{this.id}}" {{#if this.isSelected}}selected{{/if}}>{{this.name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+            <div>
+                <label class="fac-mgr-label">Dossier Layout</label>
+                <label class="fac-toggle-label">
+                    <input type="checkbox" id="fac-display-tree" {{#if activeFaction.displayAsTree}}checked{{/if}}>
+                    Org Chart
+                </label>
+            </div>
+        </div>
+
+        <!-- TEXT AREA GRID -->
+        <div class="fac-grid-text">
+            <div>
+                <label class="fac-mgr-label">Public Blurb / Lore</label>
+                <textarea id="fac-blurb" class="fac-mgr-textarea" rows="4">{{activeFaction.blurb}}</textarea>
+            </div>
+            <div>
+                <label class="fac-mgr-label">GM Notes (Secret)</label>
+                <textarea id="fac-gm-notes" class="fac-mgr-textarea secret" rows="4">{{activeFaction.gmNotes}}</textarea>
+            </div>
+        </div>
+
+        <!-- CONNECTIONS PANEL (Now full width!) -->
+        <div class="fac-panel">
+            <div class="fac-panel-header" style="margin-bottom: 10px; padding-bottom: 5px;">
+                <h3 class="fac-panel-title">Connections</h3>
+                <button type="button" class="add-connection-btn fac-mgr-btn"><i class="fas fa-plus"></i> Add Connection</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; padding-right: 5px;">
+                {{#each activeFaction.connections}}
+                <div class="fac-connection-row" style="display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 6px; border: 1px solid #4b4a44; border-radius: 4px;">
+                    <select class="conn-id fac-mgr-input" style="flex: 1;">
+                        <option value="">-- Select Faction --</option>
+                        {{selectOptions ../connectionChoices selected=this.id}}
+                    </select>
+                    <input type="text" class="conn-label fac-mgr-input" value="{{this.label}}" placeholder="e.g. Bitter Rivals, Trading Partners" style="flex: 2;">
+                    <label style="display:flex; align-items:center; gap:6px; color:#e0e0e0; font-size: 14px; cursor: pointer; white-space: nowrap; padding: 0 10px;">
+                        <input type="checkbox" class="conn-secret" {{#if this.secret}}checked{{/if}} style="margin:0; width: 16px; height: 16px;"> <i class="fas fa-user-secret" title="Secret from players"></i> Secret
+                    </label>
+                    <button type="button" class="delete-connection-btn fac-mgr-btn danger icon-only" data-index="{{@index}}"><i class="fas fa-trash"></i></button>
+                </div>
+                {{else}}
+                <p style="color: #666; font-style: italic; margin: 10px 0; text-align: center; font-size: 0.95em;">No intel linked to this organization.</p>
+                {{/each}}
+            </div>
+        </div>
+
+        <!-- HIERARCHY & FACILITIES GRID -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <!-- RANKS PANEL -->
+            <div class="fac-panel" style="margin: 0;">
+                <div class="fac-panel-header">
+                    <h3 class="fac-panel-title">Faction Ranks</h3>
+                    <button type="button" class="add-rank-btn fac-mgr-btn"><i class="fas fa-plus"></i> Add Rank</button>
+                </div>
+                
+                {{#if activeFaction.ranks}}
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    {{#each activeFaction.ranks}}
+                    <div class="rank-row" style="display: flex; gap: 10px; align-items: center;">
+                        <input type="color" class="rank-color-input fac-color-swatch" value="{{this.color}}" style="flex: 0 0 40px;" title="Rank Color">
+                        <input type="text" class="rank-name-input fac-mgr-input" value="{{this.name}}" style="flex: 1;" placeholder="e.g. General, Initiate">
+                        <button type="button" class="delete-rank-btn fac-mgr-btn danger icon-only" data-index="{{@index}}"><i class="fas fa-trash"></i></button>
+                    </div>
+                    {{/each}}
+                </div>
+                {{else}}
+                <p style="color: #666; font-style: italic; margin: 0; text-align: center;">No ranks established.</p>
+                {{/if}}
+            </div>
+
+            <!-- LOCATIONS PANEL -->
+            <div class="fac-panel" style="margin: 0;">
+                <div class="fac-panel-header">
+                    <h3 class="fac-panel-title">Facility Types</h3>
+                    <button type="button" class="add-loc-btn fac-mgr-btn"><i class="fas fa-plus"></i> Add Type</button>
+                </div>
+                
+                {{#if activeFaction.locationGroups}}
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    {{#each activeFaction.locationGroups}}
+                    <div class="loc-row" style="display: flex; gap: 10px; align-items: center;">
+                        <input type="color" class="loc-color-input fac-color-swatch" value="{{this.color}}" style="flex: 0 0 40px;" title="Category Color">
+                        <input type="text" class="loc-name-input fac-mgr-input" value="{{this.name}}" style="flex: 1;" placeholder="e.g. Headquarters, Safehouse">
+                        <button type="button" class="delete-loc-btn fac-mgr-btn danger icon-only" data-index="{{@index}}"><i class="fas fa-trash"></i></button>
+                    </div>
+                    {{/each}}
+                </div>
+                {{else}}
+                <p style="color: #666; font-style: italic; margin: 0; text-align: center;">No facility types established.</p>
+                {{/if}}
+            </div>
+        </div>
+        
+        <hr style="border: 0; height: 2px; background: #333; margin: 25px 0;">
+        
+        <!-- SAVE / DELETE -->
+        <div style="display: flex; justify-content: space-between;">
+            <button type="button" class="delete-faction-btn fac-mgr-btn danger">
+                <i class="fas fa-trash"></i> Delete Faction
+            </button>
+            <button type="button" class="save-faction-btn fac-mgr-btn success" style="padding: 0 24px; font-size: 1.1em;">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+        {{/if}}
+    </div>
+</div>
