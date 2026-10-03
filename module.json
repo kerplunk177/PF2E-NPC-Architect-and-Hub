@@ -2,7 +2,7 @@
   "name": "pf2e-npc-architect",
   "title": "PF2e NPC Architect",
   "description": "Dynamic NPC scaling and Dossier management.",
-  "version": "3.0",
+  "version": "3.1",
   "Author": "Sean Wright",
   "id": "pf2e-npc-architect",
   "compatibility": {
@@ -19,6 +19,6 @@
     }
   ],
   "manifest": "https://raw.githubusercontent.com/kerplunk177/PF2E-NPC-Architect-and-Hub/main/module.json",
-  "download": "https://github.com/kerplunk177/PF2E-NPC-Architect-and-Hub/releases/download/3.0/module.zip",
+  "download": "https://github.com/kerplunk177/PF2E-NPC-Architect-and-Hub/releases/download/3.1/module.zip",
   "flags": {}
 }

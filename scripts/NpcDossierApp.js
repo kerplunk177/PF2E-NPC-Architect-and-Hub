@@ -723,6 +723,10 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             if (hideFaction) finalFaction = "Unknown";
             else if (isLocation && (finalFaction === "Unaligned" || finalFaction === "")) finalFaction = "Locations";
 
+            // BUGFIX: Sanitize corrupted [object Object] data from legacy saves
+            let safeRank = flags.factionRank || "";
+            if (safeRank === "[object Object]" || typeof safeRank === "object") safeRank = "";
+
             return {
                 id: actor.id,
                 name: displayName,
@@ -734,7 +738,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 activeCampaign: currentCampaign,
                 isLocation: isLocation, 
                 faction: finalFaction, 
-                factionRank: flags.factionRank || "",
+                factionRank: safeRank,
                 affiliation: affLabel,
                 affClass: affClass, 
                 blurb: hideBio ? "Records redacted." : (flags.bioPublic ? flags.bioPublic.substring(0, 100) + (flags.bioPublic.length > 100 ? "..." : "") : (isLocation ? "No location details." : "No public details.")),
@@ -761,6 +765,10 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             let safeFaction = poi.faction || "Unaligned";
             if (isLoc && (safeFaction === "Unaligned" || safeFaction === "")) safeFaction = "Locations";
 
+            // BUGFIX: Sanitize corrupted [object Object] data from legacy saves
+            let safeRank = poi.factionRank || "";
+            if (safeRank === "[object Object]" || typeof safeRank === "object") safeRank = "";
+
             return {
                 id: poi.id,
                 name: poi.name,
@@ -772,7 +780,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 activeCampaign: poi.campaign || "Global",
                 isLocation: isLoc,
                 faction: safeFaction,
-                factionRank: poi.factionRank || "",
+                factionRank: safeRank,
                 affiliation: affLabel,
                 affClass: affClass,
                 blurb: poi.bioPublic || (isLoc ? "No location details." : "No public details."),
@@ -840,6 +848,10 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             const enforceMystify = facObj.mystified && (!game.user.isGM || this.previewAsPlayer);
             const opts = facObj.mystifyOptions || {};
 
+            // If a faction is totally empty AND completely hidden by the GM, skip drawing the header.
+            // Otherwise, draw the header so empty lore organizations or parent umbrellas remain visible.
+            if (facCards.length === 0 && enforceMystify && !opts.revealName) return;
+
             const displayName = (enforceMystify && !opts.revealName) ? "Unknown Faction" : facObj.name;
             const displayImg = (enforceMystify && !opts.revealImg) ? null : (facObj.img || null);
             const showTree = facObj.displayAsTree && !(enforceMystify && !opts.revealRanks);
@@ -881,20 +893,19 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 if (ungroupedLocs.actors.length > 0) locHierarchy.push(ungroupedLocs);
             }
 
-            if (facCards.length > 0 || showTree) {
-                factionList.push({ 
-                    id: facObj.id, 
-                    name: displayName, 
-                    color: facObj.customColor || savedColors[facObj.name] || "#e0e0e0",
-                    img: displayImg,
-                    personnelCards: personnelCards,
-                    locationCards: locationCards,
-                    isSubFaction: isSub,
-                    displayAsTree: showTree,
-                    hierarchy: hierarchy,
-                    locHierarchy: locHierarchy
-                });
-            }
+            factionList.push({ 
+                id: facObj.id, 
+                name: displayName, 
+                color: facObj.customColor || savedColors[facObj.name] || "#e0e0e0",
+                img: displayImg,
+                personnelCards: personnelCards,
+                locationCards: locationCards,
+                isSubFaction: isSub,
+                displayAsTree: showTree,
+                hierarchy: hierarchy,
+                locHierarchy: locHierarchy
+            });
+            
             delete groups[facObj.name];
 
             const children = factionDB.filter(f => f.parentFactionId === facObj.id).sort((a, b) => a.name.localeCompare(b.name));
