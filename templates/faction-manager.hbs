@@ -119,14 +119,17 @@
                 <button type="button" class="add-connection-btn fac-mgr-btn"><i class="fas fa-plus"></i> Add Connection</button>
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; padding-right: 5px;">
-                {{#each activeFaction.connections}}
+              {{#each activeFaction.connections}}
                 <div class="fac-connection-row" style="display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 6px; border: 1px solid #4b4a44; border-radius: 4px;">
                     <select class="conn-id fac-mgr-input" style="flex: 1;">
                         <option value="">-- Select Faction --</option>
                         {{selectOptions ../connectionChoices selected=this.id}}
                     </select>
                     <input type="text" class="conn-label fac-mgr-input" value="{{this.label}}" placeholder="e.g. Bitter Rivals, Trading Partners" style="flex: 2;">
-                    <label style="display:flex; align-items:center; gap:6px; color:#e0e0e0; font-size: 14px; cursor: pointer; white-space: nowrap; padding: 0 10px;">
+                    <label title="Sync a reciprocal connection onto the target faction" style="display:flex; align-items:center; gap:6px; color:#e0e0e0; font-size: 14px; cursor: pointer; white-space: nowrap; padding: 0 6px;">
+                        <input type="checkbox" class="conn-mutual" {{#if this.mutual}}checked{{/if}} style="margin:0; width: 16px; height: 16px;"> <i class="fas fa-exchange-alt"></i> 2-Way
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; color:#e0e0e0; font-size: 14px; cursor: pointer; white-space: nowrap; padding: 0 6px;">
                         <input type="checkbox" class="conn-secret" {{#if this.secret}}checked{{/if}} style="margin:0; width: 16px; height: 16px;"> <i class="fas fa-user-secret" title="Secret from players"></i> Secret
                     </label>
                     <button type="button" class="delete-connection-btn fac-mgr-btn danger icon-only" data-index="{{@index}}"><i class="fas fa-trash"></i></button>

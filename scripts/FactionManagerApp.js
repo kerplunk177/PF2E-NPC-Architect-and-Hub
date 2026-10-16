@@ -97,7 +97,9 @@ export class FactionManagerApp extends HandlebarsApplicationMixin(ApplicationV2)
             if (!this.activeFactionId) return;
             const active = this.factions.find(f => f.id === this.activeFactionId);
             
-            active.name = html.find('#fac-name').val().trim();
+            const oldName = active.name;
+            const newName = html.find('#fac-name').val().trim() || "Unnamed Faction";
+            active.name = newName;
             active.customColor = html.find('#fac-color').val();
             active.img = html.find('#fac-img').val().trim();
             active.parentFactionId = html.find('#fac-parent').val() || null;
@@ -121,21 +123,78 @@ export class FactionManagerApp extends HandlebarsApplicationMixin(ApplicationV2)
             });
             active.locationGroups = newLocs;
 
+            const prevConns = active.connections || [];
             const newConns = [];
             html.find('.fac-connection-row').each((i, el) => {
                 const id = $(el).find('.conn-id').val();
                 const label = $(el).find('.conn-label').val().trim();
+                const isMutual = $(el).find('.conn-mutual').is(':checked');
                 const isSecret = $(el).find('.conn-secret').is(':checked');
-                if (id && label) newConns.push({ id, label, secret: isSecret });
+                if (id && label) newConns.push({ id, label, mutual: isMutual, secret: isSecret });
             });
             active.displayAsTree = html.find('#fac-display-tree').is(':checked');
             active.connections = newConns;
 
+            // 1. Handle 2-Way (Mutual) vs 1-Way (Uni-directional) sync on target Factions
+            for (const conn of newConns) {
+                const targetFac = this.factions.find(f => f.id === conn.id);
+                if (!targetFac) continue;
+                targetFac.connections = targetFac.connections || [];
+                const existingIdx = targetFac.connections.findIndex(c => c.id === active.id);
+
+                if (conn.mutual) {
+                    if (existingIdx === -1) {
+                        targetFac.connections.push({ id: active.id, label: conn.label, mutual: true, secret: conn.secret });
+                    } else {
+                        targetFac.connections[existingIdx].secret = conn.secret;
+                        targetFac.connections[existingIdx].mutual = true;
+                    }
+                } else {
+                    const wasMutual = prevConns.find(c => c.id === conn.id)?.mutual;
+                    if (wasMutual && existingIdx !== -1) {
+                        targetFac.connections.splice(existingIdx, 1);
+                    }
+                }
+            }
+
+            // 2. Remove reciprocal connection from target Faction if a 2-Way connection was deleted here
+            const currentConnIds = new Set(newConns.map(c => c.id));
+            for (const oldConn of prevConns) {
+                if (oldConn.mutual && !currentConnIds.has(oldConn.id)) {
+                    const exFac = this.factions.find(f => f.id === oldConn.id);
+                    if (exFac && Array.isArray(exFac.connections)) {
+                        exFac.connections = exFac.connections.filter(c => c.id !== active.id);
+                    }
+                }
+            }
+
             await game.settings.set("pf2e-npc-architect", "factionData", this.factions);
+            if (oldName && oldName !== newName) {
+                const affectedActors = game.actors.filter(a => a.getFlag("pf2e-npc-architect", "data")?.faction === oldName);
+                for (const a of affectedActors) {
+                    await a.setFlag("pf2e-npc-architect", "data.faction", newName);
+                }
+
+                const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
+                if (notesJournal) {
+                    const ephemerals = notesJournal.getFlag("pf2e-npc-architect", "ephemeralNPCs") || [];
+                    let ephemChanged = false;
+                    ephemerals.forEach(e => {
+                        if (e.faction === oldName) {
+                            e.faction = newName;
+                            ephemChanged = true;
+                        }
+                    });
+                    if (ephemChanged) {
+                        await notesJournal.setFlag("pf2e-npc-architect", "ephemeralNPCs", ephemerals);
+                    }
+                }
+            }
+
             ui.notifications.info(`NPC Architect: Saved ${active.name}`);
             
             const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
-            if (dossier) dossier.render(true);
+          if (dossier) dossier.render();
             
             this.render(true);
         });
@@ -187,14 +246,14 @@ export class FactionManagerApp extends HandlebarsApplicationMixin(ApplicationV2)
             this.render(true);
         });
 
-        // Connections
-        html.find('.add-connection-btn').click(ev => {
-            if (!this.activeFactionId) return;
-            const active = this.factions.find(f => f.id === this.activeFactionId);
-            if (!active.connections) active.connections = [];
-            active.connections.push({ id: "", label: "", secret: false });
-            this.render(true);
-        });
+       // Connections
+       html.find('.add-connection-btn').click(ev => {
+        if (!this.activeFactionId) return;
+        const active = this.factions.find(f => f.id === this.activeFactionId);
+        if (!active.connections) active.connections = [];
+        active.connections.push({ id: "", label: "", mutual: true, secret: false });
+        this.render(true);
+    });
         html.find('.delete-connection-btn').click(ev => {
             const idx = $(ev.currentTarget).data('index');
             const active = this.factions.find(f => f.id === this.activeFactionId);

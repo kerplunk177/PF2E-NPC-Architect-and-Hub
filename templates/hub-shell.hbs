@@ -96,9 +96,12 @@
                     <label>Target Level</label>
                     <input type="number" name="targetLevel" value="{{actor.system.details.level.value}}">
                 </div>
-                <button type="button" class="apply-scaling-btn" style="margin-top: 10px;">
-                    <i class="fas fa-bolt"></i> Apply Scaling Math
-                </button>
+                <button type="button" class="apply-scaling-btn" style="flex: 1;">
+                        <i class="fas fa-bolt"></i> Apply Scaling Math
+                    </button>
+                    <button type="button" class="quick-forge-btn" style="flex: 1;">
+                        <i class="fas fa-hammer"></i> Quick Forge Strike
+                    </button>
             </div>
         </div>
 
@@ -111,7 +114,8 @@
                     {{/each}}
                     <option value="new">+ Create New Class</option>
                 </select>
-                <button type="button" class="save-archetype-btn" style="flex:0 0 100px;"><i class="fas fa-save"></i> Save</button>
+                <button type="button" class="save-archetype-btn" style="flex:0 0 90px;"><i class="fas fa-save"></i> Save</button>
+                <button type="button" class="delete-archetype-btn remove-connection-btn" style="flex:0 0 40px;" title="Delete Selected Class"><i class="fas fa-trash"></i></button>
             </div>
 
             <div id="builder-editor" style="display:none;">
@@ -141,6 +145,8 @@
                     <span style="flex:0 0 45px; text-align:center;">Ref</span>
                     <span style="flex:0 0 45px; text-align:center;">Will</span>
                     <span style="flex:0 0 45px; text-align:center;">Per</span>
+                    <span style="flex:0 0 110px; text-align:center;">Train Skills</span>
+                    <span style="flex:1; padding-left:10px;">Features (Drag Items/Spells Here)</span>
                     <span style="flex:1; padding-left:10px;">Features (Drag Items/Spells Here)</span>
                 </div>
 
@@ -154,7 +160,7 @@
                 <h3>Relationship Tracker</h3>
                 <p class="notes" style="margin-top:0; color:#aaa;">Link this NPC to PCs or other tracked members of the campaign hub.</p>
                 
-                <div id="connections-list">
+               <div id="connections-list">
                     {{#each connections}}
                     <div class="connection-row" style="display:flex; gap:10px; margin-bottom: 8px; align-items:center;">
                         <select class="conn-id" style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; padding: 4px;">
@@ -162,6 +168,12 @@
                         </select>
                         <input type="text" class="conn-label" value="{{this.label}}" placeholder="e.g. Brother, Sworn Rival" style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; padding: 4px;">
                         
+                        <label title="Sync a reciprocal connection onto the target's sheet" style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.4); padding:4px 8px; border:1px solid #4b4a44; border-radius:4px; cursor:pointer;">
+                            <input type="checkbox" class="conn-mutual" {{#if this.mutual}}checked{{/if}} style="margin:0; width:14px; height:14px;">
+                            <i class="fas fa-exchange-alt" style="color:#e0e0e0;"></i> 
+                            <span style="font-size:12px; color:#e0e0e0;">2-Way</span>
+                        </label>
+
                         <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.4); padding:4px 8px; border:1px solid #4b4a44; border-radius:4px; cursor:pointer;">
                             <input type="checkbox" class="conn-secret" {{#if this.secret}}checked{{/if}} style="margin:0; width:14px; height:14px;">
                             <i class="fas fa-user-secret" style="color:#e0e0e0;"></i> 

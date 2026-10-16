@@ -66,6 +66,13 @@ export class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
             };
         });
 
+        const enrich = (foundry.applications?.ux?.TextEditor?.implementation || TextEditor).enrichHTML;
+        const enrichedBio = this.poi.bioPublic ? await enrich(this.poi.bioPublic, { async: true }) : "";
+
+        for (const note of formattedNotes) {
+            note.text = await enrich(note.text, { async: true });
+        }
+
         return {
             actor: { name: this.poi.name, id: this.poi.id },
             isGM: game.user.isGM,
@@ -74,36 +81,49 @@ export class PoiPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
             faction: this.poi.faction || "Unaligned",
             affiliation: affLabel,
             affClass: affClass,
-            bioPublic: this.poi.bioPublic || "",
+            bioPublic: enrichedBio,
             partyNotesList: formattedNotes.reverse(), 
             connections: [],
             isLocation: this.poi.isLocation || false,
+            hasCodex: game.modules.get("terminal-lexicon")?.active
         };
     }
     
     _onRender(context, options) {
         super._onRender(context, options);
         const html = $(this.element);
-// Launch Faction Sheet from NPC Profile
-html.on('click', '.npc-faction-link', async (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    
-    const factionName = $(ev.currentTarget).data('name');
-    
-    // Don't try to open sheets for system defaults
-    if (!factionName || factionName === "Unaligned" || factionName === "Locations" || factionName === "Unknown") return;
-    
-    const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
-    const faction = factionDB.find(f => f.name === factionName);
-    
-    if (faction) {
-        const module = await import("./FactionSheetApp.js");
-        new module.FactionSheetApp(faction.id).render(true);
-    } else {
-        ui.notifications.warn(`NPC Architect: No detailed records exist for "${factionName}".`);
-    }
-});
+
+        // 1. Fix Codex ID reference (this.poi.id instead of this.actor.id)
+        html.find('.push-to-codex-btn').click(async ev => {
+            ev.preventDefault();
+            ev.stopPropagation(); 
+            
+            const api = game.modules.get("pf2e-npc-architect")?.api;
+            if (api) {
+                await api.pushToCodex(this.poi.id); 
+            } else {
+                ui.notifications.error("ArchitectAPI is not loaded! Ensure your init hook is running in your main module file.");
+            }
+        });
+
+        // 2. Bind directly via .find() so it doesn't stack on this.element
+        html.find('.npc-faction-link').on('click', async (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            
+            const factionName = $(ev.currentTarget).data('name');
+            if (!factionName || factionName === "Unaligned" || factionName === "Locations" || factionName === "Unknown") return;
+            
+            const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
+            const faction = factionDB.find(f => f.name === factionName);
+            
+            if (faction) {
+                const module = await import("./FactionSheetApp.js");
+                new module.FactionSheetApp(faction.id).render(true);
+            } else {
+                ui.notifications.warn(`NPC Architect: No detailed records exist for "${factionName}".`);
+            }
+        });
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
         html.find('.mystify-toggle').hide();
 
@@ -251,11 +271,11 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             actor: Hooks.on("updateActor", (actor, changes) => {
                 const isTracked = actor.getFlag("pf2e-npc-architect", "data")?.tracked;
                 const changedFlags = foundry.utils.hasProperty(changes, "flags.pf2e-npc-architect");
-                if (isTracked || changedFlags) this.render({ force: true });
+                if (isTracked || changedFlags) this.render();
             }),
             journal: Hooks.on("updateJournalEntry", (journal, changes) => {
                 if (journal.name === "NPC Dossier Shared Notes") {
-                    this.render({ force: true });
+                    this.render();
                 }
             })
         };
@@ -544,6 +564,61 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                         await journal.setFlag("pf2e-npc-architect", "ephemeralNPCs", ephemerals);
                         const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
                         if (dossier) dossier.render(false);
+                    }
+                },
+                promote: {
+                    label: "Promote to Actor",
+                    icon: '<i class="fas fa-user-plus"></i>',
+                    callback: async (html) => {
+                        const updatedPoi = {
+                            ...poi,
+                            name: html.find('#edit-poi-name').val() || "Unknown",
+                            isLocation: html.find('#edit-poi-is-location').is(':checked'),
+                            img: html.find('#edit-poi-img').val() || "icons/svg/mystery-man.svg",
+                            faction: html.find('#edit-poi-faction').val(),
+                            factionRank: html.find('#edit-poi-rank').val(),
+                            affiliation: html.find('#edit-poi-affiliation').val(),
+                            bioPublic: html.find('#edit-poi-bio').val()
+                        };
+
+                        const newActor = await Actor.create({
+                            name: updatedPoi.name,
+                            type: "npc",
+                            img: updatedPoi.img,
+                            "prototypeToken.texture.src": updatedPoi.img,
+                            flags: {
+                                "pf2e-npc-architect": {
+                                    data: {
+                                        campaign: updatedPoi.campaign || "Global",
+                                        faction: updatedPoi.faction || "Unaligned",
+                                        factionRank: updatedPoi.factionRank || "",
+                                        isLocation: updatedPoi.isLocation || false,
+                                        affiliation: updatedPoi.affiliation || "Neutral",
+                                        bioPublic: updatedPoi.bioPublic || "",
+                                        status: "Alive",
+                                        tracked: true
+                                    }
+                                }
+                            }
+                        });
+
+                        if (!newActor) return;
+
+                        const poiNotes = journal.getFlag("pf2e-npc-architect", `notes_${poiId}`) || [];
+                        if (poiNotes.length > 0) {
+                            await journal.setFlag("pf2e-npc-architect", `notes_${newActor.id}`, poiNotes);
+                            await journal.unsetFlag("pf2e-npc-architect", `notes_${poiId}`);
+                        }
+
+                        const remaining = (journal.getFlag("pf2e-npc-architect", "ephemeralNPCs") || []).filter(e => e.id !== poiId);
+                        await journal.setFlag("pf2e-npc-architect", "ephemeralNPCs", remaining);
+
+                        const dossier = foundry.applications.instances.get("npc-dossier-hub");
+                        if (dossier) dossier.render({ force: true });
+
+                        ui.notifications.info(`Promoted ${newActor.name} to a full Actor!`);
+                        const { NpcArchitectApp } = await import("./NpcArchitectApp.js");
+                        new NpcArchitectApp(newActor).render(true);
                     }
                 },
                 delete: {
@@ -969,6 +1044,11 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
 
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
+        html.find('.broadcast-sheet-btn').click(ev => {
+            ev.preventDefault();
+            game.socket.emit("module.pf2e-npc-architect", { action: "showSheet", type: "poi", id: this.poi.id });
+            ui.notifications.info(`Broadcasted ${this.poi.name}'s file to players.`);
+        });
 
         html.find('.card-image').click(ev => {
             ev.stopPropagation(); 
@@ -1001,6 +1081,36 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             import("./NpcArchitectApp.js").then(module => {
                 new module.NpcArchitectApp(actor).render(true);
             });
+        });
+
+        html.find('.aff-badge').on('click', async ev => {
+            if (!game.user.isGM || !ev.shiftKey) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const cycle = ["Enemy", "Dislike", "Neutral", "Friendly", "Allied", "Unknown"];
+            const card = ev.currentTarget.closest('.dossier-card');
+            const entityId = card.dataset.id;
+
+            if (card.classList.contains('ephemeral')) {
+                const journal = game.journal.getName("NPC Dossier Shared Notes");
+                if (!journal) return;
+                const ephemerals = journal.getFlag("pf2e-npc-architect", "ephemeralNPCs") || [];
+                const idx = ephemerals.findIndex(e => e.id === entityId);
+                if (idx !== -1) {
+                    const current = ephemerals[idx].affiliation || "Neutral";
+                    const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+                    ephemerals[idx].affiliation = next;
+                    await journal.setFlag("pf2e-npc-architect", "ephemeralNPCs", ephemerals);
+                }
+            } else {
+                const actor = game.actors.get(entityId);
+                if (!actor) return;
+                const current = actor.getFlag("pf2e-npc-architect", "data")?.affiliation || "Neutral";
+                const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+                await actor.setFlag("pf2e-npc-architect", "data.affiliation", next);
+            }
+            game.socket.emit("module.pf2e-npc-architect", { action: "forceRefresh" });
         });
 
         html.find('.card-content').click(ev => {
@@ -1065,6 +1175,8 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
                             await targetActor.setFlag("pf2e-npc-architect", "data", {
                                 campaign: poi.campaign || "Global",
                                 faction: poi.faction || "Unaligned",
+                                factionRank: poi.factionRank || "",
+                                isLocation: poi.isLocation || false,
                                 affiliation: poi.affiliation || "Neutral",
                                 bioPublic: poi.bioPublic || "",
                                 status: "Alive",
@@ -1139,7 +1251,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             }
         });
 
-        html.on('click', '.faction-name-link', async (ev) => {
+        html.find('.faction-name-link').on('click', async (ev) => {
             ev.stopPropagation();
             const factionId = String($(ev.currentTarget).data('id')); 
             const factionDB = game.settings.get("pf2e-npc-architect", "factionData") || [];
@@ -1153,7 +1265,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             }
         });
 
-        html.on('contextmenu', '.faction-name-link', async (ev) => {
+        html.find('.faction-name-link').on('contextmenu', async (ev) => {
             if (!game.user.isGM) return;
             ev.preventDefault();
             ev.stopPropagation();
@@ -1195,7 +1307,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             });
         });
 
-        html.on('click', '.org-node', async ev => {
+        html.find('.org-node').on('click', async ev => {
             const card = ev.currentTarget;
             const actorId = card.dataset.id;
             const isEphemeral = card.dataset.ephemeral === "true";
@@ -1211,7 +1323,7 @@ export class NpcDossierApp extends HandlebarsApplicationMixin(ApplicationV2) {
             }
         });
 
-        html.on('contextmenu', '.org-node', ev => {
+        html.find('.org-node').on('contextmenu', ev => {
             if (!game.user.isGM) return;
             ev.preventDefault();
             ev.stopPropagation();

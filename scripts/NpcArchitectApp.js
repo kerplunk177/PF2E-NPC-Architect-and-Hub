@@ -1,5 +1,6 @@
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-import { updateNpcStats } from "./NpcDataModel.js";
+
+import { updateNpcStats, quickForge } from "./NpcDataModel.js";
 
 export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
     
@@ -49,11 +50,15 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
         
         const currentFactionName = String(flags.faction || "Unaligned").trim();
         const currentFactionObj = factionDB.find(f => f.name === currentFactionName);
-        const availableRanks = currentFactionObj?.ranks || [];
+        const rawCategories = (data.isLocation ? currentFactionObj?.locationGroups : currentFactionObj?.ranks) || [];
+        const availableRanks = rawCategories.map(r => typeof r === "string" ? r : r.name);
+
+        let safeRank = flags.factionRank || "";
+        if (safeRank === "[object Object]" || typeof safeRank === "object") safeRank = "";
 
         data.faction = currentFactionName;
         data.availableFactions = existingFactions;
-        data.factionRank = flags.factionRank || "";
+        data.factionRank = safeRank;
         data.availableRanks = availableRanks;
         data.hasRanks = availableRanks.length > 0;
 
@@ -116,7 +121,29 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
             return acc;
         }, {});
 
-        data.connections = flags.connections || [];
+        const currentConnections = foundry.utils.deepClone(flags.connections || []);
+        let backfilled = false;
+
+        // Backfill any pre-existing one-way links from other actors so they appear in this Connections tab
+        for (const otherActor of game.actors) {
+            if (otherActor.id === this.actor.id) continue;
+            const otherFlags = otherActor.getFlag("pf2e-npc-architect", "data") || {};
+            const incoming = (otherFlags.connections || []).find(c => c.id === this.actor.id);
+            if (incoming && !currentConnections.some(c => c.id === otherActor.id)) {
+                currentConnections.push({
+                    id: otherActor.id,
+                    label: incoming.label,
+                    secret: !!incoming.secret
+                });
+                backfilled = true;
+            }
+        }
+
+        if (backfilled) {
+            await this.actor.setFlag("pf2e-npc-architect", "data.connections", currentConnections);
+        }
+
+        data.connections = currentConnections;
         
         return {
             actor: this.actor,
@@ -129,6 +156,9 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const html = $(this.element);
         
         if (!event.target || !$(event.target).closest('#builder-editor').length) {
+            const prevFlags = this.actor.getFlag("pf2e-npc-architect", "data") || {};
+            const prevConnections = prevFlags.connections || [];
+
             formData.tracked = !!formData.tracked;
             formData.isLocation = !!formData.isLocation; 
             
@@ -146,18 +176,70 @@ export class NpcArchitectApp extends HandlebarsApplicationMixin(ApplicationV2) {
             html.find('.connection-row').each((i, row) => {
                 const id = $(row).find('.conn-id').val();
                 const label = $(row).find('.conn-label').val().trim();
+                const isMutual = $(row).find('.conn-mutual').is(':checked');
                 const isSecret = $(row).find('.conn-secret').is(':checked'); 
                 
                 if (id && label) {
-                    connections.push({ id: id, label: label, secret: isSecret });
+                    connections.push({ id: id, label: label, mutual: isMutual, secret: isSecret });
                 }
             });
             formData.connections = connections;
             
+            if (event?.target?.name === "faction" || event?.target?.name === "isLocation") {
+                formData.factionRank = "";
+            }
+
             await this.actor.setFlag("pf2e-npc-architect", "data", formData);
 
-            const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
-            if (dossier) dossier.render(false);
+            // 1. Handle 2-Way (Mutual) vs 1-Way (Uni-directional) sync on target Actors
+            for (const conn of connections) {
+                const targetActor = game.actors.get(conn.id);
+                if (!targetActor) continue;
+                const targetFlags = foundry.utils.deepClone(targetActor.getFlag("pf2e-npc-architect", "data") || {});
+                targetFlags.connections = targetFlags.connections || [];
+                const existingIdx = targetFlags.connections.findIndex(c => c.id === this.actor.id);
+
+                if (conn.mutual) {
+                    if (existingIdx === -1) {
+                        targetFlags.connections.push({
+                            id: this.actor.id,
+                            label: conn.label,
+                            mutual: true,
+                            secret: conn.secret
+                        });
+                        await targetActor.setFlag("pf2e-npc-architect", "data", targetFlags);
+                    } else if (targetFlags.connections[existingIdx].secret !== conn.secret || !targetFlags.connections[existingIdx].mutual) {
+                        targetFlags.connections[existingIdx].secret = conn.secret;
+                        targetFlags.connections[existingIdx].mutual = true;
+                        await targetActor.setFlag("pf2e-npc-architect", "data", targetFlags);
+                    }
+                } else {
+                    // If it was previously 2-Way and the GM just unchecked 2-Way, remove the reciprocal link
+                    const wasMutual = prevConnections.find(c => c.id === conn.id)?.mutual;
+                    if (wasMutual && existingIdx !== -1) {
+                        targetFlags.connections.splice(existingIdx, 1);
+                        await targetActor.setFlag("pf2e-npc-architect", "data", targetFlags);
+                    }
+                }
+            }
+
+            // 2. If a 2-Way connection was deleted here, remove the reciprocal connection from the target Actor
+            const currentIds = new Set(connections.map(c => c.id));
+            for (const oldConn of prevConnections) {
+                if (oldConn.mutual && !currentIds.has(oldConn.id)) {
+                    const exTarget = game.actors.get(oldConn.id);
+                    if (!exTarget) continue;
+                    const exFlags = foundry.utils.deepClone(exTarget.getFlag("pf2e-npc-architect", "data") || {});
+                    if (Array.isArray(exFlags.connections)) {
+                        exFlags.connections = exFlags.connections.filter(c => c.id !== this.actor.id);
+                        await exTarget.setFlag("pf2e-npc-architect", "data", exFlags);
+                    }
+                }
+            }
+
+            if (event?.target?.name === "faction" || event?.target?.name === "isLocation") {
+                this.render();
+            }
         }
     }
 
@@ -213,6 +295,21 @@ html.find('.faction-name-link').contextmenu(async (ev) => {
             await this.actor.setFlag("pf2e-npc-architect", "data", { role: formData.role, targetLevel: parseInt(formData.targetLevel) });
             this.render(true);
         });
+        html.find('.quick-forge-btn').click(async (event) => {
+            event.preventDefault();
+            await quickForge(this.actor);
+        });
+
+        html.find('.delete-archetype-btn').click(async (event) => {
+            event.preventDefault();
+            if (!this._editingArchetype) return;
+            const allArchetypes = foundry.utils.deepClone(game.settings.get("pf2e-npc-architect", "customArchetypes") || {});
+            delete allArchetypes[this._editingArchetype.id];
+            await game.settings.set("pf2e-npc-architect", "customArchetypes", allArchetypes);
+            ui.notifications.info(`Deleted Archetype: ${this._editingArchetype.name}`);
+            this._editingArchetype = null;
+            this.render(true);
+        });
 
         const archetypeSelect = html.find('#archetype-select');
         const editorDiv = html.find('#builder-editor');
@@ -253,6 +350,12 @@ html.find('.faction-name-link').contextmenu(async (ev) => {
                     </select>
                     <input type="text" class="conn-label" placeholder="e.g. Brother, Sworn Rival" style="flex: 1; background: rgba(255,255,255,0.9); border: 1px solid #4b4a44; padding: 4px;">
                     
+                    <label title="Sync a reciprocal connection onto the target's sheet" style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.4); padding:4px 8px; border:1px solid #4b4a44; border-radius:4px; cursor:pointer;">
+                        <input type="checkbox" class="conn-mutual" checked style="margin:0; width:14px; height:14px;">
+                        <i class="fas fa-exchange-alt" style="color:#e0e0e0;"></i> 
+                        <span style="font-size:12px; color:#e0e0e0;">2-Way</span>
+                    </label>
+
                     <label style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.4); padding:4px 8px; border:1px solid #4b4a44; border-radius:4px; cursor:pointer;">
                         <input type="checkbox" class="conn-secret" style="margin:0; width:14px; height:14px;">
                         <i class="fas fa-user-secret" style="color:#e0e0e0;"></i> 
@@ -356,6 +459,9 @@ html.find('.faction-name-link').contextmenu(async (ev) => {
                 <div style="flex:0 0 45px;">${makeSelect('ref-select', lvl.ref)}</div>
                 <div style="flex:0 0 45px;">${makeSelect('will-select', lvl.will)}</div>
                 <div style="flex:0 0 45px;">${makeSelect('per-select', lvl.per)}</div>
+                <div style="flex:0 0 110px; padding: 0 4px;">
+                    <input type="text" class="skill-input" value="${lvl.skill || ''}" placeholder="e.g. stealth, arcana" title="Comma-separated skills to train to High at this level" style="font-size:0.75em; height:20px; padding:0 4px; background: rgba(255,255,255,0.9); color: #111; border: 1px solid #444;">
+                </div>
                 <div class="drop-zone" style="flex:1; min-height:24px; background:rgba(255,255,255,0.05); border-radius:3px; padding:2px; margin-left:5px; border: 1px dashed #555;">
                     ${itemsHtml || '<span style="color:#888; font-style:italic; font-size:0.8em;">Drag items/spells here</span>'}
                 </div>
@@ -403,10 +509,12 @@ html.find('.faction-name-link').contextmenu(async (ev) => {
             const ref = $(row).find('.ref-select').val();
             const will = $(row).find('.will-select').val();
             const per = $(row).find('.per-select').val();
+            const skill = $(row).find('.skill-input').val().trim();
 
             const lvlObj = this._editingArchetype.levels.find(l => l.level === level);
             if (lvlObj) {
                 lvlObj.hp = hp; lvlObj.ac = ac; lvlObj.fort = fort; lvlObj.ref = ref; lvlObj.will = will; lvlObj.per = per;
+                lvlObj.skill = skill;
             }
         });
 

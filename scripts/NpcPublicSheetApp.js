@@ -114,12 +114,12 @@ export class NpcPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
         
         if (!hideConn) {
             for (let conn of connectionsRaw) {
-                if (conn.secret && !isGM) continue;
+                if (conn.secret && (!isGM || this.previewAsPlayer)) continue;
                 const linkedActor = game.actors.get(conn.id);
                 if (linkedActor) {
                     const linkedFlags = linkedActor.getFlag("pf2e-npc-architect", "data") || {};
                     const linkedFaction = String(linkedFlags.faction || "").trim().toLowerCase();
-                    if (linkedFaction === "hidden" && !isGM) continue;
+                    if (linkedFaction === "hidden" && (!isGM || this.previewAsPlayer)) continue;
 
                     const connMystified = linkedActor.getFlag("pf2e-npc-architect", "mystified") || false;
                     const connOpts = linkedActor.getFlag("pf2e-npc-architect", "mystifyOptions") || {};
@@ -135,6 +135,14 @@ export class NpcPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
             }
         }
 
+        const enrich = (foundry.applications?.ux?.TextEditor?.implementation || TextEditor).enrichHTML;
+        const rawBio = hideBio ? "Records redacted." : (flags.bioPublic || "");
+        const enrichedBio = rawBio ? await enrich(rawBio, { async: true, relativeTo: this.actor }) : "";
+
+        for (const note of formattedNotes) {
+            note.text = await enrich(note.text, { async: true });
+        }
+
         return {
             actor: { name: hideName ? "Unknown Entity" : this.actor.name, id: this.actor.id },
             isGM: isGM,
@@ -143,21 +151,37 @@ export class NpcPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
             faction: hideFaction ? "Unknown" : (flags.faction || "Unaligned"),
             affiliation: affLabel,
             affClass: affClass,
-            bioPublic: hideBio ? "Records redacted." : (flags.bioPublic || ""),
+            bioPublic: enrichedBio,
             partyNotesList: formattedNotes.reverse(), 
             connections: resolvedConnections,
             isLocation: flags.isLocation || false,
+            hasCodex: game.modules.get("terminal-lexicon")?.active
         };
     }
 
     _onRender(context, options) {
+
         super._onRender(context, options);
         const html = $(this.element);
-
+        html.find('.push-to-codex-btn').click(async ev => {
+            ev.preventDefault();
+            ev.stopPropagation(); 
+            
+            const api = game.modules.get("pf2e-npc-architect")?.api;
+            if (api) {
+                await api.pushToCodex(this.actor.id); 
+            } else {
+                ui.notifications.error("ArchitectAPI is not loaded! Ensure your init hook is running in your main module file.");
+            }
+        });
         // 1. Copy/Paste Fix for the main window textareas
         html.find('input, textarea').on('contextmenu', ev => ev.stopPropagation());
-
-        html.on('click', '.npc-faction-link', async (ev) => {
+        html.find('.broadcast-sheet-btn').click(ev => {
+            ev.preventDefault();
+            game.socket.emit("module.pf2e-npc-architect", { action: "showSheet", type: "actor", id: this.actor.id });
+            ui.notifications.info(`Broadcasted ${this.actor.name}'s file to players.`);
+        });
+        html.find('.npc-faction-link').on('click', async (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
             
@@ -240,7 +264,7 @@ export class NpcPublicSheetApp extends HandlebarsApplicationMixin(ApplicationV2)
                             this.render({ force: true });
                             
                             const dossier = Array.from(foundry.applications.instances.values()).find(w => w.id === "npc-dossier-hub");
-                            if (dossier) dossier.render(true);
+                            if (dossier) dossier.render();
                         }
                     }
                 },

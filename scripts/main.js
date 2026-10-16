@@ -1,5 +1,6 @@
 import { NpcArchitectApp } from "./NpcArchitectApp.js";
 import { NpcDossierApp } from "./NpcDossierApp.js";
+import { ArchitectAPI } from "./ArchitectAPI.js";
 
 Hooks.once('init', async () => {
     console.log("NPC Architect | Initializing");
@@ -19,7 +20,7 @@ Hooks.once('init', async () => {
             { key: "KeyD", modifiers: [KeyboardManager.MODIFIER_KEYS.ALT] }
         ],
         onDown: () => {
-            const existingApp = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
+            const existingApp = foundry.applications.instances.get("npc-dossier-hub");
             if (existingApp) {
                 existingApp.close(); 
             } else {
@@ -38,7 +39,7 @@ Hooks.once('init', async () => {
         type: String,
         default: "All",
         onChange: () => {
-            const dossier = Object.values(ui.windows).find(w => w.id === "npc-dossier-hub");
+            const dossier = foundry.applications.instances.get("npc-dossier-hub");
             if (dossier) dossier.render();
         }
     });
@@ -156,13 +157,41 @@ Hooks.once("ready", async () => {
         }
     }
     
-    game.socket.on("module.pf2e-npc-architect", (data) => {
+    game.socket.on("module.pf2e-npc-architect", async (data) => {
         if (data.action === "forceRefresh") {
-            Object.values(ui.windows).forEach(w => {
-                if (w.id === "npc-dossier-hub" || w.id.startsWith("public-sheet-")) {
+            for (const w of foundry.applications.instances.values()) {
+                if (w.id === "npc-dossier-hub" || w.id === "faction-sheet-app" || w.id.startsWith("public-sheet-")) {
                     w.render({ force: true });
                 }
-            });
+            }
+        } else if (data.action === "showSheet" && !game.user.isGM) {
+            if (data.type === "actor") {
+                const actor = game.actors.get(data.id);
+                if (actor) {
+                    const { NpcPublicSheetApp } = await import("./NpcPublicSheetApp.js");
+                    new NpcPublicSheetApp(actor).render({ force: true });
+                }
+            } else if (data.type === "poi") {
+                const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
+                const ephemerals = notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", "ephemeralNPCs") || []) : [];
+                const poi = ephemerals.find(e => e.id === data.id);
+                if (poi) {
+                    const { PoiPublicSheetApp } = await import("./NpcDossierApp.js");
+                    new PoiPublicSheetApp(poi).render({ force: true });
+                }
+            } else if (data.type === "faction") {
+                const { FactionSheetApp } = await import("./FactionSheetApp.js");
+                new FactionSheetApp(data.id).render({ force: true });
+            }
+        }
+    });
+
+    Hooks.on("updateJournalEntry", (journal) => {
+        if (journal.name !== "NPC Dossier Shared Notes") return;
+        for (const w of foundry.applications.instances.values()) {
+            if (w.id === "faction-sheet-app" || w.id.startsWith("public-sheet-")) {
+                w.render({ force: true });
+            }
         }
     });
 });
@@ -223,5 +252,12 @@ Hooks.on("getSceneControlButtons", (controls) => {
         } else {
             tokenControls.tools["npc-dossier"] = dossierTool;
         }
+    }
+});
+Hooks.once("init", () => {
+    const module = game.modules.get("pf2e-npc-architect");
+    if (module) {
+        module.api = new ArchitectAPI();
+        console.log("NPC Architect | API initialized and bound to game.modules.");
     }
 });

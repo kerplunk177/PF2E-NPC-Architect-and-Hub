@@ -11,10 +11,18 @@
             <button type="button" class="mystify-toggle" style="margin-bottom: 8px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
                 <i class="fas fa-cog"></i> Mystification Settings
             </button>
-            <button type="button" class="preview-toggle" style="margin-bottom: 15px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
+            <button type="button" class="preview-toggle" style="margin-bottom: 8px; width: 100%; cursor: pointer; background: rgba(255, 255, 255, 0.1); color: #e0e0e0; border: 1px solid #5a5954; border-radius: 3px; padding: 4px; transition: all 0.2s;">
                 <i class="fas {{#if previewAsPlayer}}fa-user-tie{{else}}fa-users{{/if}}"></i> 
                 {{#if previewAsPlayer}}Return to GM View{{else}}Preview Player View{{/if}}
             </button>
+            <button type="button" class="broadcast-sheet-btn" style="margin-bottom: 8px; width: 100%; cursor: pointer; background: rgba(70, 130, 180, 0.25); color: #bfe0ff; border: 1px solid #4682b4; border-radius: 3px; padding: 4px; font-weight: bold; transition: all 0.2s;" title="Pop this file open for all players">
+                <i class="fas fa-broadcast-tower"></i> Show to Players
+            </button>
+            {{#if hasCodex}}
+            <button type="button" class="push-to-codex-btn" style="margin-bottom: 15px; width: 100%; cursor: pointer; background: rgba(68,170,68,0.2); border: 1px solid #44aa44; color: #aaffaa; border-radius: 3px; padding: 4px; font-weight: bold; transition: all 0.2s;" title="Sync to Campaign Codex">
+                <i class="fas fa-book-journal-whills"></i> Open Codex File
+            </button>
+            {{/if}}
             {{/if}}
             
             <h1 class="npc-name" style="font-family: 'Modesto Condensed', serif; font-size: 2em; text-align: center; margin: 0 0 10px 0; line-height: 1.1em; color: #e0e0e0;">
@@ -41,7 +49,7 @@
                     <i class="fas {{#if isLocation}}fa-map-marker-alt{{else}}fa-book-open{{/if}}"></i> 
                     {{#if isLocation}}Location Details{{else}}Public Records{{/if}}
                 </h3>
-                <div class="bio-text" style="font-size: 1.1em; line-height: 1.4em; color: #ccc; white-space: pre-wrap; max-height: 200px; overflow-y: auto; padding-right: 10px;">{{#if bioPublic}}{{bioPublic}}{{else}}<em style="color:#777;">No records on file.</em>{{/if}}</div>
+               <div class="bio-text" style="font-size: 1.1em; line-height: 1.4em; color: #ccc; white-space: pre-wrap; max-height: 200px; overflow-y: auto; padding-right: 10px;">{{#if bioPublic}}{{{bioPublic}}}{{else}}<em style="color:#777;">No records on file.</em>{{/if}}</div>
             </div>
             
             {{#if connections.length}}
@@ -82,7 +90,7 @@
                                 {{/if}}
                             </span>
                         </div>
-                        <div style="color: #111; font-size: 1em; white-space: pre-wrap; line-height: 1.3em;">{{text}}</div>
+                   <div style="color: #111; font-size: 1em; white-space: pre-wrap; line-height: 1.3em;">{{{text}}}</div>
                     </div>
                     {{/each}}
                     

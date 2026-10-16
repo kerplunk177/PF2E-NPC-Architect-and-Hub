@@ -79,6 +79,7 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
             return { id: targetFac.id, name: targetFac.name, color: targetFac.customColor || "#e0e0e0", label: c.label, secret: c.secret };
         }).filter(c => c !== null);
+        // Reciprocal connections are now stored directly on each faction in FactionManagerApp
 
         // Hierarchy & Location Parsing
         let activeHierarchy = [];
@@ -142,7 +143,15 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
 
         const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
-        const partyNotes = notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", `notes_${faction.id}`) || []) : [];
+        const partyNotes = foundry.utils.deepClone(notesJournal ? (notesJournal.getFlag("pf2e-npc-architect", `notes_${faction.id}`) || []) : []);
+
+        const enrich = (foundry.applications?.ux?.TextEditor?.implementation || TextEditor).enrichHTML;
+        if (faction.blurb) faction.blurb = await enrich(faction.blurb, { async: true });
+        if (faction.gmNotes && game.user.isGM) faction.gmNotes = await enrich(faction.gmNotes, { async: true });
+
+        for (const note of partyNotes) {
+            note.text = await enrich(note.text, { async: true });
+        }
 
         return {
             faction: faction, parent: parent, children: children, partyNotes: partyNotes,
@@ -151,7 +160,8 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             hierarchy: activeHierarchy, hasHierarchy: activeHierarchy.length > 0,
             locHierarchy: activeLocHierarchy, hasLocHierarchy: activeLocHierarchy.length > 0,
             isGM: game.user.isGM, previewAsPlayer: this.previewAsPlayer,
-            mystifyBannerText: mystifyBannerText, mystifyBannerClass: mystifyBannerClass
+            mystifyBannerText: mystifyBannerText, mystifyBannerClass: mystifyBannerClass,
+            hasCodex: game.modules.get("terminal-lexicon")?.active
         };
     }
     
@@ -159,13 +169,29 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         super._onRender(context, options);
         const html = $(this.element);
         
-        html.on('contextmenu', ev => {
+        html.off('contextmenu').on('contextmenu', ev => {
             if (!$(ev.target).closest('.org-node, .delete-note-btn').length) ev.stopPropagation();
         });
 
         html.find('.preview-toggle').click(ev => {
             this.previewAsPlayer = !this.previewAsPlayer;
             this.render(true);
+        });
+        html.find('.broadcast-sheet-btn').click(ev => {
+            ev.preventDefault();
+            game.socket.emit("module.pf2e-npc-architect", { action: "showSheet", type: "faction", id: this.factionId });
+            ui.notifications.info("Broadcasted Faction file to players.");
+        });
+
+        html.find('.push-to-codex-btn').click(async ev => {
+            ev.preventDefault();
+            ev.stopPropagation(); 
+            const api = game.modules.get("pf2e-npc-architect")?.api;
+            if (api) {
+                await api.pushToCodex(this.factionId);
+            } else {
+                ui.notifications.error("ArchitectAPI is not loaded.");
+            }
         });
 
         html.find('.mystify-toggle').click(ev => {
@@ -234,7 +260,7 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
 
         // The rest of the standard clicks (Org Nodes, Links, Notes)
-        html.on('click', '.org-node', async ev => {
+        html.find('.org-node').on('click', async ev => {
             const actorId = $(ev.currentTarget).data('id');
             const isEphemeral = $(ev.currentTarget).data('ephemeral');
             if (isEphemeral) {
@@ -249,7 +275,7 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             }
         });
 
-        html.on('contextmenu', '.org-node', ev => {
+        html.find('.org-node').on('contextmenu', ev => {
             if (!game.user.isGM) return;
             ev.preventDefault(); ev.stopPropagation();
             const actorId = $(ev.currentTarget).data('id');
@@ -258,12 +284,12 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             else { const actor = game.actors.get(actorId); if (actor) { import("./NpcArchitectApp.js").then(m => new m.NpcArchitectApp(actor).render(true)); } }
         });
 
-        html.on('click', '.faction-link', ev => {
+        html.find('.faction-link').on('click', ev => {
             const targetId = $(ev.currentTarget).data('id');
             if (targetId) { new FactionSheetApp(targetId).render(true); this.close(); }
         });
 
-        html.on('click', '.add-note-btn', async ev => {
+        html.find('.add-note-btn').on('click', async ev => {
             const input = html.find('.note-input');
             const text = input.val().trim();
             if (!text) return;
@@ -275,7 +301,7 @@ export class FactionSheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
             this.render(true);
         });
 
-        html.on('click', '.delete-note-btn', async ev => {
+        html.find('.delete-note-btn').on('click', async ev => {
             const idx = $(ev.currentTarget).data('index');
             const notesJournal = game.journal.getName("NPC Dossier Shared Notes");
             if (!notesJournal) return;

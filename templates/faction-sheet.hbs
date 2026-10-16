@@ -92,6 +92,14 @@
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
             <button type="button" class="mystify-toggle" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid #4b4a44; color: #e0e0e0; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-user-secret"></i> Mystification Settings</button>
             <button type="button" class="preview-toggle" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid #4b4a44; color: #e0e0e0; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas {{#if previewAsPlayer}}fa-user-tie{{else}}fa-users{{/if}}"></i> {{#if previewAsPlayer}}Return to GM View{{else}}Preview Player View{{/if}}</button>
+            {{#if hasCodex}}
+            <button type="button" class="push-to-codex-btn" style="flex: 1; background: rgba(68,170,68,0.2); border: 1px solid #44aa44; color: #aaffaa; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;" title="Sync to Campaign Codex">
+                <i class="fas fa-book-journal-whills"></i> Open Codex File
+            </button>
+            <button type="button" class="broadcast-sheet-btn" style="flex: 1; background: rgba(70, 130, 180, 0.25); border: 1px solid #4682b4; color: #bfe0ff; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;" title="Pop this faction file open for all players">
+                <i class="fas fa-broadcast-tower"></i> Show to Players
+            </button>
+            {{/if}}
         </div>
         {{/if}}
 
@@ -110,7 +118,7 @@
         <div class="fac-panel">
             <h3><i class="fas fa-book-open"></i> Public Records</h3>
             {{#if faction.blurb}}
-                <p class="blurb-text">{{faction.blurb}}</p>
+                <p class="blurb-text">{{{faction.blurb}}}</p>
             {{else}}
                 <p style="color: #888; font-style: italic; margin: 0; font-size: 0.9em;">No records on file.</p>
             {{/if}}
@@ -202,10 +210,10 @@
         <div class="fac-panel">
             <h3><i class="fas fa-users"></i> Party Notes</h3>
             <div class="notes-list" style="margin-bottom: 10px;">
-                {{#each partyNotes}}
+              {{#each partyNotes}}
                     <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #333; position: relative;">
                         <strong style="color: #aaa; font-size: 0.8em;">{{this.author}}</strong>
-                        <p style="margin: 0; color: #e0e0e0; font-size: 0.95em;">{{this.text}}</p>
+                        <p style="margin: 0; color: #e0e0e0; font-size: 0.95em;">{{{this.text}}}</p>
                         <button type="button" class="delete-note-btn" data-index="{{@index}}" style="position: absolute; right: 0; top: 0; background: transparent; border: none; color: #ff8888; cursor: pointer; padding: 0;"><i class="fas fa-times"></i></button>
                     </div>
                 {{else}}
@@ -222,10 +230,11 @@
         <div class="fac-panel gm-panel">
             <h3><i class="fas fa-user-secret"></i> GM Secrets</h3>
             {{#if faction.gmNotes}}
-                <p class="blurb-text">{{faction.gmNotes}}</p>
+                <p class="blurb-text">{{{faction.gmNotes}}}</p>
             {{else}}
                 <p style="color: #aa5555; font-style: italic; margin: 0; font-size: 0.9em;">No classified notes on file.</p>
             {{/if}}
+        </div>
         {{/if}}
     {{/if}}
 </div>
